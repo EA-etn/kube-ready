@@ -206,6 +206,23 @@ def pull_policy(res: Resource, ctx: Context) -> Iterator[Finding]:
 Y un test en `tests/test_rules.py`. `ctx.resources` tiene todos los manifiestos de la ejecución,
 para reglas que necesiten mirar objetos relacionados.
 
+## Cadena de suministro
+
+El workflow de release aplica a la propia herramienta lo que ella exige a los demás:
+
+- **Actions fijadas por SHA**, con la versión en un comentario; Dependabot las mantiene al día.
+- **Imagen firmada sin claves con cosign** (Sigstore, OIDC de GitHub), por digest, más **SBOM y
+  atestación de procedencia** de BuildKit. Verifícala antes de ejecutarla:
+
+```bash
+cosign verify ghcr.io/ea-etn/kube-ready:0.1.0 \
+  --certificate-identity-regexp 'https://github.com/EA-etn/kube-ready/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+- **Mínimo privilegio**: los workflows son de solo lectura por defecto y amplían permisos por job.
+- **Imagen mínima y sin root**: `python:3.13-slim`, uid 10001, nada más que el paquete.
+
 ## Desarrollo
 
 ```bash

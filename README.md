@@ -206,6 +206,23 @@ def pull_policy(res: Resource, ctx: Context) -> Iterator[Finding]:
 Plus a test in `tests/test_rules.py`. `ctx.resources` holds every manifest of the run, for
 rules that need to look at related objects.
 
+## Supply chain
+
+The release workflow is the same story the tool tells, applied to itself:
+
+- **Actions pinned by SHA**, with the version as a comment; Dependabot keeps them current.
+- **Image signed keyless with cosign** (Sigstore, GitHub OIDC), by digest, plus **SBOM and
+  provenance attestations** from BuildKit. Verify before you run it:
+
+```bash
+cosign verify ghcr.io/ea-etn/kube-ready:0.1.0 \
+  --certificate-identity-regexp 'https://github.com/EA-etn/kube-ready/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+- **Least privilege**: workflows are read-only by default and widen permissions per job.
+- **Non-root, minimal image**: `python:3.13-slim`, uid 10001, nothing but the package.
+
 ## Development
 
 ```bash
