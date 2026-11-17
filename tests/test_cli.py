@@ -192,3 +192,22 @@ def test_bad_baseline_is_usage_error(tmp_path, body):
 
 def test_missing_baseline_is_usage_error(tmp_path):
     assert main(["check", str(EXAMPLES / "good"), "--baseline", str(tmp_path / "x")]) == EXIT_USAGE
+
+
+def test_github_annotations_format(capsys):
+    main(["check", str(EXAMPLES / "bad"), "-f", "github"])
+    out = capsys.readouterr().out.splitlines()
+    first = [line for line in out if line.startswith("::")][0]
+    assert first.startswith("::error file=") and ",line=2,title=RDY001 " in first
+    assert "::warning " in "\n".join(out) and "::notice " in "\n".join(out)
+    assert out[-1].startswith("kube-ready: 6 errors")
+
+
+def test_github_format_escapes_commas_and_newlines(tmp_path, capsys):
+    weird = tmp_path / "a,b.yaml"
+    weird.write_text(
+        "apiVersion: v1\nkind: Secret\nmetadata: {name: s, namespace: ns}\ndata: {k: dg==}\n"
+    )
+    main(["check", str(weird), "-f", "github"])
+    line = capsys.readouterr().out.splitlines()[0]
+    assert "a%2Cb.yaml" in line and "\n" not in line

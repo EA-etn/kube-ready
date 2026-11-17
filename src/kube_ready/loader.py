@@ -58,6 +58,8 @@ def parse_documents(text: str, source: str) -> list[Resource]:
     try:
         while loader.check_node():
             node = loader.get_node()
+            if node is None:  # pragma: no cover - check_node() guarantees a node
+                break
             line = node.start_mark.line + 1
             data = loader.construct_document(node)
             resources.extend(_as_resources(data, source, line))

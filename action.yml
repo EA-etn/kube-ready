@@ -26,6 +26,10 @@ inputs:
     description: If set, also write a SARIF report here (upload it with github/codeql-action/upload-sarif).
     required: false
     default: ""
+  annotations:
+    description: Print findings as GitHub annotations (inline on the PR diff). Set to "false" for plain text.
+    required: false
+    default: "true"
 
 runs:
   using: composite
@@ -46,6 +50,7 @@ runs:
         KR_CONFIG: ${{ inputs.config }}
         KR_DISABLE: ${{ inputs.disable }}
         KR_SARIF: ${{ inputs.sarif-file }}
+        KR_ANNOTATIONS: ${{ inputs.annotations }}
       run: |
         args=()
         [ -n "$KR_CONFIG" ] && args+=(--config "$KR_CONFIG")
@@ -54,5 +59,10 @@ runs:
         if [ -n "$KR_SARIF" ]; then
           kube-ready check $KR_PATH "${args[@]}" --format sarif --output "$KR_SARIF" --fail-on never
         fi
+        if [ "$KR_ANNOTATIONS" = "true" ]; then
+          args+=(--format github)
+        else
+          args+=(--verbose)
+        fi
         # shellcheck disable=SC2086
-        kube-ready check $KR_PATH "${args[@]}" --verbose --fail-on "$KR_FAIL_ON"
+        kube-ready check $KR_PATH "${args[@]}" --fail-on "$KR_FAIL_ON"

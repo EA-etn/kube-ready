@@ -32,8 +32,10 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+  "mypy>=1.10",
   "pytest>=8.0",
   "ruff>=0.6",
+  "types-PyYAML",
 ]
 
 [project.scripts]
@@ -55,6 +57,10 @@ extend-exclude = ["*.md"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "W"]
+
+[tool.mypy]
+strict = true
+files = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

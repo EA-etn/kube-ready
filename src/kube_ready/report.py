@@ -148,6 +148,41 @@ def render_sarif(report: Report) -> str:
     return json.dumps(doc, indent=2)
 
 
+GITHUB_LEVEL = {Severity.ERROR: "error", Severity.WARNING: "warning", Severity.INFO: "notice"}
+
+
+def _gh_escape(value: str, prop: bool = False) -> str:
+    """Escape for GitHub Actions workflow commands (data vs. property values)."""
+    value = value.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+    if prop:
+        value = value.replace(":", "%3A").replace(",", "%2C")
+    return value
+
+
+def render_github(report: Report) -> str:
+    """One ``::level file=...,line=...,title=...::message`` per finding.
+
+    GitHub Actions turns these into annotations on the check and inline on the PR diff.
+    """
+    lines = []
+    for f in report.findings:
+        title = f.rule_id if f.rule_id == "RDY000" else f"{f.rule_id} {RULES[f.rule_id].title}"
+        props = (
+            f"file={_gh_escape(f.resource.source, prop=True)},"
+            f"line={max(f.resource.line, 1)},"
+            f"title={_gh_escape(title, prop=True)}"
+        )
+        message = f"{f.resource.ref}: {f.message}. {f.hint}".strip()
+        lines.append(f"::{GITHUB_LEVEL[f.severity]} {props}::{_gh_escape(message)}")
+    e, w, i = (report.count(s) for s in (Severity.ERROR, Severity.WARNING, Severity.INFO))
+    lines.append(
+        f"kube-ready: {e} errors, {w} warnings, {i} info across {len(report.resources)} "
+        f"resources in {len(report.files)} files"
+        + (f" ({report.suppressed} hidden by baseline)" if report.baseline_file else "")
+    )
+    return "\n".join(lines)
+
+
 def render_rules(console: Console) -> None:
     from rich.table import Table
 

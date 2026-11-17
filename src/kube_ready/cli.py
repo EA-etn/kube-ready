@@ -15,7 +15,13 @@ from kube_ready import __version__, baseline
 from kube_ready.config import FAIL_ON_CHOICES, Config, ConfigError, load_config
 from kube_ready.loader import load
 from kube_ready.model import Finding, Report, Resource, Severity
-from kube_ready.report import render_json, render_rules, render_sarif, render_text
+from kube_ready.report import (
+    render_github,
+    render_json,
+    render_rules,
+    render_sarif,
+    render_text,
+)
 from kube_ready.rules import RULES, run
 
 EXIT_OK, EXIT_FINDINGS, EXIT_USAGE = 0, 1, 2
@@ -46,7 +52,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     check = sub.add_parser("check", help="check manifests (files, directories or - for stdin)")
     _add_common(check)
-    check.add_argument("-f", "--format", choices=("text", "json", "sarif"), default="text")
+    check.add_argument(
+        "-f",
+        "--format",
+        choices=("text", "json", "sarif", "github"),
+        default="text",
+        help="github prints GitHub Actions annotations (inline on the PR diff)",
+    )
     check.add_argument("-o", "--output", metavar="FILE", help="write the report to FILE")
     check.add_argument(
         "--fail-on",
@@ -153,7 +165,8 @@ def main(argv: list[str] | None = None) -> int:
         else:
             render_text(report, console, verbose=args.verbose)
     else:
-        text = render_json(report) if args.format == "json" else render_sarif(report)
+        renderers = {"json": render_json, "sarif": render_sarif, "github": render_github}
+        text = renderers[args.format](report)
         if args.output:
             Path(args.output).write_text(text + "\n", encoding="utf-8")
         else:
