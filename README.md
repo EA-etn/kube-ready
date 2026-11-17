@@ -20,6 +20,10 @@ versions that no longer exist.
 
 No cluster needed. Runs in a second. Fails your CI with a clear message and a hint to fix it.
 
+<img src="docs/video/kube-ready-demo-en.gif" alt="Terminal demo: a Deployment with a latest tag, one replica and no probes fails the check; the fixed one passes; a baseline hides known findings" width="100%">
+
+<sub>🎬 Two-minute narrated explainer: [English](docs/video/kube-ready-explainer-en.mp4) · [Español](docs/video/kube-ready-explainer-es.mp4)</sub>
+
 ```
 $ kube-ready check examples/bad --verbose
 
@@ -43,6 +47,12 @@ examples/bad/deployment.yaml
 6 errors, 15 warnings, 13 info across 5 resources in 1 files.
 ```
 
+## How it works
+
+<img src="docs/diagrams/en/01-how-it-works.svg" alt="Inputs (YAML files, helm template, kustomize build, stdin) go through the loader, the context and 22 rules, then filters, and come out as text, JSON, SARIF or GitHub annotations; it runs as a CI gate, pre-commit hook, GitHub Action or Docker image" width="100%">
+
+<sub><a href="https://raw.githubusercontent.com/EA-etn/kube-ready/main/docs/diagrams/en/01-how-it-works.png">🔍 View full size</a></sub>
+
 ## Why another linter?
 
 [kube-score](https://github.com/zegl/kube-score), [kube-linter](https://github.com/stackrox/kube-linter)
@@ -50,6 +60,11 @@ and [Polaris](https://github.com/FairwindsOps/polaris) are great and more comple
 the one you read in an afternoon: about a thousand lines of Python, one function per rule, a test per rule,
 and every rule explains *why* it exists. It is meant to be adopted in five minutes and extended
 in ten.
+
+## Try it in the browser
+
+**[ea-etn.github.io/kube-ready](https://ea-etn.github.io/kube-ready/)**: paste a manifest, get the verdict. The page runs the
+real package in your browser with Pyodide, so nothing is uploaded anywhere.
 
 ## Install
 
@@ -132,6 +147,12 @@ metadata:
   annotations:
     kube-ready/ignore: "RDY006, RDY007"   # single replica is fine for this dev tool
 ```
+
+## Where it fits
+
+<img src="docs/diagrams/en/02-scenarios.svg" alt="Seven scenarios: GitOps repository, Helm and Kustomize, pull request review, pre-commit hook, cluster upgrade, security hardening, big legacy repository, platform team policy" width="100%">
+
+<sub><a href="https://raw.githubusercontent.com/EA-etn/kube-ready/main/docs/diagrams/en/02-scenarios.png">🔍 View full size</a></sub>
 
 ## Adopt it in a big repository
 
@@ -224,6 +245,15 @@ cosign verify ghcr.io/ea-etn/kube-ready:0.1.0 \
 
 - **Least privilege**: workflows are read-only by default and widen permissions per job.
 - **Non-root, minimal image**: `python:3.13-slim`, uid 10001, nothing but the package.
+
+## Programmatic use
+
+```python
+from kube_ready import api
+
+report = api.check_text(open("deploy.yaml").read())
+print(report["summary"], [f["rule"] for f in report["findings"]])
+```
 
 ## Development
 

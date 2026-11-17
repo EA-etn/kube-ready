@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="style.css"><title>kube-ready video</title></head>
+<body>
+<div class="brand"><b>kube-ready</b> <span id="brandsub"></span></div>
+<div class="counter" id="counter"></div>
+<div id="stage"></div>
+<div class="cap" id="cap" style="display:none"><span class="n" id="capn">1</span><span id="capt"></span></div>
+<script src="script.js"></script>
+<script>
+(function () {
+  const CPS = 24, PAUSE = 0.35, LPS = 40, HOLD = 2.6;
+  const q = new URLSearchParams(location.search);
+  const production = q.get('production') || 'demo', lang = q.get('lang') || 'en';
+  const scenes = window.SCRIPT[production](lang);
+  let starts = [], durs = [], total = 0;
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  document.getElementById('brandsub').textContent = production === 'demo' ? '· demo' : (lang === 'es' ? '· cómo funciona' : '· how it works');
+  document.documentElement.lang = lang;
+
+  // ---- per-scene visual timelines
+  for (const sc of scenes) {
+    if (sc.type === 'terminal') {
+      let cur = 0.4;
+      for (const b of sc.blocks) {
+        b.t0 = cur; b.tOut = cur + b.cmd.length / CPS + PAUSE; b.tEnd = b.tOut + b.out.length / LPS + HOLD; cur = b.tEnd;
+      }
+      sc.visual = cur;
+    } else {
+      const n = (sc.bullets || []).length;
+      sc.visual = Math.max(4, 1.2 + n * 0.55 + 2.5);
+    }
+  }
+  let stepNo = 0; for (const sc of scenes) for (const b of sc.blocks || []) { if (b.cap !== (sc._lastCap)) stepNo++; b.step = stepNo; sc._lastCap = b.cap; }
+  window.VISUAL = scenes.map((s) => s.visual);
+  window.NARRATION = scenes.map((s) => s.narration || '');
+  window.setTimeline = function (d) { durs = d; starts = []; total = 0; for (const x of d) { starts.push(total); total += x; } window.TOTAL = total; return total; };
+  window.setTimeline(window.VISUAL);
+
+  // ---- colouring of terminal lines
+  function colour(line, kind) {
+    let s = esc(line);
+    if (kind === 'cmd') return `<span class="p">$ </span><span class="c">${s}</span>`;
+    if (/^\s*✖/.test(s)) s = s.replace(/^(\s*✖ RDY\d+)/, '<span class="e">$1</span>');
+    else if (/^\s*▲/.test(s)) s = s.replace(/^(\s*▲ RDY\d+)/, '<span class="w">$1</span>');
+    else if (/^\s*ℹ/.test(s)) s = s.replace(/^(\s*ℹ RDY\d+)/, '<span class="i">$1</span>');
+    else if (/^✔/.test(s)) return `<span class="ok">${s}</span>`;
+    else if (/^::error/.test(s)) s = s.replace(/^(::error[^:]*::)/, '<span class="e">$1</span>');
+    else if (/^::warning/.test(s)) s = s.replace(/^(::warning[^:]*::)/, '<span class="w">$1</span>');
+    else if (/^\d+ errors?,/.test(s) || /^\d+ findings recorded/.test(s)) return `<span class="c">${s}</span>`;
+    else if (/^[\w./-]+\.ya?ml$/.test(s)) return `<span class="c">${s}</span>`;
+    else if (/^\s*[\w-]+:/.test(s) && !/RDY/.test(s)) {
+      s = s.replace(/^(\s*)([\w-]+)(:)/, '$1<span class="k">$2</span>$3');
+      s = s.replace(/^(\s*- )([\w-]+)(:)/, '$1<span class="k">$2</span>$3');
+      s = s.replace(/:latest$/, '<span class="e">:latest</span>').replace(/(replicas: )(1)$/, '$1<span class="e">2</span>'.replace('2', '1'));
+    }
+    s = s.replace(/((?:Deployment|CronJob|Secret|Service|Ingress)\/[\w./-]+)/, '<span class="r">$1</span>');
+    s = s.replace(/(\(line \d+\))/, '<span class="d">$1</span>');
+    return s;
+  }
+
+  // ---- renderers
+  const stage = document.getElementById('stage'), cap = document.getElementById('cap');
+  function caption(text, n, accent) {
+    if (!text) { cap.style.display = 'none'; return; }
+    cap.style.display = 'flex'; cap.style.setProperty('--accent', accent || '#10b981');
+    document.getElementById('capn').textContent = n; document.getElementById('capt').innerHTML = text;
+  }
+  function subtitle(sc, local, dur) {
+    // Narration split into sentences, timed proportionally to their length.
+    const text = sc.narration || ''; if (!text) return '';
+    const sentences = text.match(/[^.?!]+[.?!]+/g) || [text];
+    // Long sentences are split at commas so a subtitle never exceeds ~two lines
+    const parts = [];
+    for (const sen of sentences) {
+      if (sen.trim().length <= 105) { parts.push(sen); continue; }
+      let chunk = '';
+      for (const piece of sen.split(/(?<=,)\s+/)) {
+        if (chunk && (chunk + ' ' + piece).length > 105) { parts.push(chunk); chunk = piece; } else chunk = chunk ? chunk + ' ' + piece : piece;
+      }
+      if (chunk) parts.push(chunk);
+    }
+    const totalLen = parts.reduce((a, p) => a + p.length, 0);
+    const speech = Math.max(1, dur - 0.9); let acc = 0;
+    for (const p of parts) { acc += (p.length / totalLen) * speech; if (local < acc) return p.trim(); }
+    return parts[parts.length - 1].trim();
+  }
+
+  function renderTerminal(sc, local, idx, dur) {
+    const tall = production === 'demo';
+    const rows = tall ? 19 : 16;
+    let lines = [], current = null, typing = false, done = false, step = 1;
+    for (const b of sc.blocks) {
+      if (local < b.t0) break;
+      if (b.clear) lines = [];
+      else if (lines.length && lines[lines.length - 1].endsWith('<span class="cur"></span>')) lines.pop();
+      current = b; step = b.step;
+      const n = Math.min(b.cmd.length, Math.floor((local - b.t0) * CPS));
+      lines.push(colour(b.cmd.slice(0, n), 'cmd') + (n < b.cmd.length ? '<span class="cur"></span>' : ''));
+      typing = n < b.cmd.length; done = false;
+      if (local >= b.tOut) {
+        const k = Math.min(b.out.length, Math.floor((local - b.tOut) * LPS));
+        for (const l of b.out.slice(0, k)) lines.push(colour(l));
+        if (k >= b.out.length) { done = true; lines.push('<span class="p">$ </span><span class="cur"></span>'); }
+      }
+    }
+    const shown = lines.slice(-rows);
+    stage.innerHTML = `<div class="term" style="height:${tall ? 540 : 470}px"><div class="bar"><i></i><i></i><i></i><span>bash · kube-ready 0.1.0</span></div><pre style="white-space:pre-wrap;word-break:break-all;font-size:17px;line-height:1.45;padding:12px 22px">${shown.join('\n')}</pre></div>`;
+    if (production === 'demo') caption(current ? esc(current.cap) : '', step, current && current.accent);
+    else caption(esc(subtitle(sc, local, dur)), idx + 1, '#3b82f6');
+  }
+
+  function renderSlide(sc, local, idx, dur) {
+    const on = (i) => (local >= 1.0 + i * 0.55 ? ' on' : '');
+    let html = '';
+    if (sc.kind === 'title') {
+      html = `<div class="slide"><div class="eyebrow">${esc(sc.eyebrow)}</div><h1 class="big" style="margin-top:120px">${esc(sc.title)}</h1><div class="sub fade${local > 0.8 ? ' on' : ''}" style="font-size:40px;max-width:1100px;margin-top:28px">${esc(sc.sub)}</div>
+        <div class="pills fade${local > 1.6 ? ' on' : ''}" style="margin-top:60px"><span class="pill" style="--c:var(--orange)">22 rules</span><span class="pill" style="--c:var(--green)">SARIF</span><span class="pill" style="--c:var(--blue)">GitHub Action</span><span class="pill" style="--c:var(--purple)">pre-commit</span><span class="pill" style="--c:var(--cyan)">baseline</span><span class="pill" style="--c:var(--yellow)">signed image</span></div></div>`;
+    } else if (sc.kind === 'bullets') {
+      html = `<div class="slide"><h2>${esc(sc.title)}</h2><div class="sub">${esc(sc.sub)}</div><ul>${sc.bullets.map((b, i) => `<li class="${on(i)}"><i></i><span>${b}</span></li>`).join('')}</ul></div>`;
+    } else if (sc.kind === 'image') {
+      const prog = Math.max(0, Math.min(1, (local - 1.5) / Math.max(1, dur - 3.5)));
+      const img = document.querySelector(`img[data-src="${sc.image}"]`);
+      const h = img ? img.naturalHeight * 720 / img.naturalWidth : 560;
+      const y = -Math.max(0, h - 560) * prog;
+      html = `<div class="slide"><div class="cols"><div class="l"><h2 style="font-size:38px">${esc(sc.title)}</h2><div class="sub" style="font-size:22px;margin-top:10px">${esc(sc.sub)}</div>
+        <ul style="margin-top:22px;gap:10px">${sc.bullets.map((b, i) => `<li class="${on(i)}" style="font-size:22px"><i></i><span>${b}</span></li>`).join('')}</ul></div>
+        <div class="r" style="width:720px;height:520px"><img src="${sc.image}" style="width:720px;transform:translateY(${y.toFixed(1)}px)"></div></div></div>`;
+    } else if (sc.kind === 'cta') {
+      html = `<div class="slide"><h1 class="big" style="font-size:84px">${esc(sc.title)}</h1><div class="sub" style="font-size:30px">${esc(sc.sub)}</div>
+        <div class="code fade${local > 0.8 ? ' on' : ''}" style="display:block;margin-top:34px;max-width:1100px"><b>$</b> pip install kube-ready\n<b>$</b> docker run --rm -v "$PWD:/work:ro" ghcr.io/ea-etn/kube-ready check .\n<b>-</b> uses: EA-etn/kube-ready@v0.1.0</div>
+        <div class="pills fade${local > 1.8 ? ' on' : ''}"><span class="pill" style="--c:var(--purple)">github.com/EA-etn/kube-ready</span><span class="pill" style="--c:var(--green)">MIT</span></div></div>`;
+    }
+    stage.innerHTML = html;
+    if (production === 'explainer') caption(esc(subtitle(sc, local, dur)), idx + 1, '#3b82f6'); else caption('');
+  }
+
+  window.seek = function (t) {
+    let idx = 0; for (let i = 0; i < starts.length; i++) if (t >= starts[i]) idx = i;
+    const sc = scenes[idx], local = t - starts[idx], dur = durs[idx];
+    document.getElementById('counter').textContent = `${String(idx + 1).padStart(2, '0')} / ${String(scenes.length).padStart(2, '0')}`;
+    if (sc.type === 'terminal') renderTerminal(sc, local, idx, dur); else renderSlide(sc, local, idx, dur);
+  };
+
+  // Preload images so naturalHeight is known
+  const pre = document.createElement('div'); pre.style.display = 'none';
+  for (const sc of scenes) if (sc.image) { const im = new Image(); im.src = sc.image; im.dataset.src = sc.image; pre.appendChild(im); }
+  document.body.appendChild(pre);
+  window.ready = () => Promise.all([...pre.querySelectorAll('img')].map((im) => im.complete ? 1 : new Promise((r) => { im.onload = r; im.onerror = r; }))).then(() => document.fonts.ready);
+  window.seek(0);
+})();
+</script>
+</body></html>

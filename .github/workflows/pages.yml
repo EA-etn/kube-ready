@@ -1,0 +1,49 @@
+name: Playground
+
+# Publishes playground/ to GitHub Pages with the wheel built from main, so the page runs the
+# same code as the CLI, in the visitor's browser (Pyodide). No server, nothing uploaded.
+on:
+  push:
+    branches: [main]
+    paths: [playground/**, src/**, pyproject.toml, .github/workflows/pages.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+      - name: Build the wheel and assemble the site
+        run: |
+          pip install --quiet build
+          python -m build --wheel --outdir dist
+          mkdir -p site
+          cp playground/index.html site/
+          cp dist/*.whl site/
+          basename dist/*.whl > site/wheel.txt
+          cat site/wheel.txt
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4

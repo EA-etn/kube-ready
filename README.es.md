@@ -20,6 +20,10 @@ subidos a Git, versiones de API que ya no existen.
 
 No necesita clúster. Tarda un segundo. Rompe el CI con un mensaje claro y una pista para arreglarlo.
 
+<img src="docs/video/kube-ready-demo-es.gif" alt="Demo de terminal: un Deployment con tag latest, una réplica y sin probes falla la comprobación; el arreglado pasa; un baseline oculta los hallazgos conocidos" width="100%">
+
+<sub>🎬 Vídeo explicativo de dos minutos, con voz: [Español](docs/video/kube-ready-explainer-es.mp4) · [English](docs/video/kube-ready-explainer-en.mp4)</sub>
+
 ```
 $ kube-ready check examples/bad --verbose
 
@@ -43,12 +47,23 @@ examples/bad/deployment.yaml
 6 errors, 15 warnings, 13 info across 5 resources in 1 files.
 ```
 
+## Cómo funciona
+
+<img src="docs/diagrams/es/01-how-it-works.svg" alt="Las entradas (ficheros YAML, helm template, kustomize build, stdin) pasan por el cargador, el contexto y 22 reglas, luego los filtros, y salen como texto, JSON, SARIF o anotaciones de GitHub; se ejecuta como puerta del CI, hook de pre-commit, GitHub Action o imagen Docker" width="100%">
+
+<sub><a href="https://raw.githubusercontent.com/EA-etn/kube-ready/main/docs/diagrams/es/01-how-it-works.png">🔍 Ver a tamaño completo</a></sub>
+
 ## ¿Otro linter más?
 
 [kube-score](https://github.com/zegl/kube-score), [kube-linter](https://github.com/stackrox/kube-linter)
 y [Polaris](https://github.com/FairwindsOps/polaris) son estupendos y más completos. kube-ready es
 el que te lees en una tarde: unas mil líneas de Python, una función por regla, un test por regla, y
 cada regla explica *por qué* existe. Está pensado para adoptarlo en cinco minutos y extenderlo en diez.
+
+## Pruébalo en el navegador
+
+**[ea-etn.github.io/kube-ready](https://ea-etn.github.io/kube-ready/)**: pega un manifiesto y mira el veredicto. La página
+ejecuta el paquete real en tu navegador con Pyodide, así que no se sube nada a ningún sitio.
 
 ## Instalación
 
@@ -131,6 +146,12 @@ metadata:
   annotations:
     kube-ready/ignore: "RDY006, RDY007"   # una réplica es suficiente para esta herramienta interna
 ```
+
+## Dónde encaja
+
+<img src="docs/diagrams/es/02-scenarios.svg" alt="Siete escenarios: repositorio GitOps, Helm y Kustomize, revisión de pull requests, hook de pre-commit, actualización del clúster, endurecimiento de seguridad, repositorio grande heredado, política del equipo de plataforma" width="100%">
+
+<sub><a href="https://raw.githubusercontent.com/EA-etn/kube-ready/main/docs/diagrams/es/02-scenarios.png">🔍 Ver a tamaño completo</a></sub>
 
 ## Adoptarlo en un repo grande
 
@@ -224,6 +245,15 @@ cosign verify ghcr.io/ea-etn/kube-ready:0.1.0 \
 
 - **Mínimo privilegio**: los workflows son de solo lectura por defecto y amplían permisos por job.
 - **Imagen mínima y sin root**: `python:3.13-slim`, uid 10001, nada más que el paquete.
+
+## Uso desde Python
+
+```python
+from kube_ready import api
+
+report = api.check_text(open("deploy.yaml").read())
+print(report["summary"], [f["rule"] for f in report["findings"]])
+```
 
 ## Desarrollo
 

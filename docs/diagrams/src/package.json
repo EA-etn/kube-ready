@@ -1,0 +1,12 @@
+{
+  "name": "kube-ready-diagrams",
+  "private": true,
+  "description": "Diagrams as code: HTML + Lucide icons, rendered to PNG and animated SVG with Playwright",
+  "scripts": {
+    "render": "node render.js .."
+  },
+  "dependencies": {
+    "lucide-static": "0.577.0",
+    "playwright": "1.63.0"
+  }
+}

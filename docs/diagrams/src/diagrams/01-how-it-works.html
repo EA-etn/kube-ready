@@ -1,0 +1,104 @@
+<!-- size: 1200x1360 -->
+<div class="title">
+  <div class="eyebrow">kube-ready · how it works</div>
+  <h1>From manifests to a verdict in one second</h1>
+</div>
+
+<!-- Inputs -->
+<div class="zone" id="zin" style="--c:var(--purple);left:40px;top:130px;width:1120px;height:170px"><div class="zl">inputs · no cluster needed</div></div>
+<div class="card" id="in1" style="--c:var(--purple);left:60px;top:185px;width:260px">
+  <div class="ico"><i data-icon="file-text"></i></div>
+  <div><h3>YAML files</h3><div class="sub">files · directories</div></div>
+</div>
+<div class="card" id="in2" style="--c:var(--purple);left:340px;top:185px;width:260px">
+  <div class="ico"><i data-icon="package"></i></div>
+  <div><h3>helm template</h3><div class="sub">piped to stdin</div></div>
+</div>
+<div class="card" id="in3" style="--c:var(--purple);left:620px;top:185px;width:260px">
+  <div class="ico"><i data-icon="layers"></i></div>
+  <div><h3>kustomize build</h3><div class="sub">piped to stdin</div></div>
+</div>
+<div class="card" id="in4" style="--c:var(--purple);left:900px;top:185px;width:240px">
+  <div class="ico"><i data-icon="terminal"></i></div>
+  <div><h3>stdin</h3><div class="sub mono">kube-ready check -</div></div>
+</div>
+
+<!-- Engine -->
+<div class="zone" id="zen" style="--c:var(--blue);left:40px;top:350px;width:1120px;height:560px"><div class="zl">engine</div></div>
+<div class="card" id="loader" style="--c:var(--blue);left:70px;top:405px;width:340px">
+  <div class="ico"><i data-icon="scan-search"></i></div>
+  <div><h3>Loader</h3><div class="sub">multi-doc · kind: List · file and line</div></div>
+</div>
+<div class="card" id="ctx" style="--c:var(--blue);left:70px;top:535px;width:340px">
+  <div class="ico"><i data-icon="boxes"></i></div>
+  <div><h3>Context</h3><div class="sub">every resource of the run</div></div>
+</div>
+<div class="card" id="filt" style="--c:var(--blue);left:70px;top:665px;width:340px">
+  <div class="ico"><i data-icon="filter"></i></div>
+  <div><h3>Filters</h3><div class="sub">config · --disable · ignore annotation · baseline</div></div>
+</div>
+
+<div class="card col" id="rules" style="--c:var(--orange);left:450px;top:405px;width:680px">
+  <div class="head"><div class="ico"><i data-icon="shield-check"></i></div>
+    <div><h3>22 rules</h3><div class="sub">one small function each · each one says why</div></div></div>
+  <div class="pills" style="--c:var(--orange);margin-top:14px">
+    <span class="pill">Images</span><span class="pill">Resources</span><span class="pill">Probes</span>
+    <span class="pill">Availability</span><span class="pill">Security</span><span class="pill">Hygiene</span>
+  </div>
+  <div class="pills" style="--c:var(--red);margin-top:10px">
+    <span class="pill mono">RDY001 :latest</span><span class="pill mono">RDY009 privileged</span><span class="pill mono">RDY013 hostPath</span><span class="pill mono">RDY015 removed API</span>
+  </div>
+  <div class="pills" style="--c:var(--yellow);margin-top:10px">
+    <span class="pill mono">RDY002 requests</span><span class="pill mono">RDY004 liveness</span><span class="pill mono">RDY006 1 replica</span><span class="pill mono">RDY014 Secret in Git</span><span class="pill mono">RDY019 no TLS</span>
+  </div>
+</div>
+<div style="position:absolute;left:510px;top:795px;width:580px;font:500 16px/1.5 Inter;color:var(--muted)">Cross-resource rules see the whole run: an HPA satisfies the replica rule, a PDB must match its pods, a Service must select something.</div>
+
+<!-- Outputs -->
+<div class="zone" id="zout" style="--c:var(--green);left:40px;top:960px;width:1120px;height:170px"><div class="zl">outputs</div></div>
+<div class="card" id="o1" style="--c:var(--green);left:60px;top:1015px;width:265px">
+  <div class="ico"><i data-icon="terminal"></i></div>
+  <div><h3>text</h3><div class="sub">colours · hints · exit code</div></div>
+</div>
+<div class="card" id="o2" style="--c:var(--green);left:345px;top:1015px;width:255px">
+  <div class="ico"><i data-icon="braces"></i></div>
+  <div><h3>json</h3><div class="sub">scripts and dashboards</div></div>
+</div>
+<div class="card" id="o3" style="--c:var(--green);left:620px;top:1015px;width:255px">
+  <div class="ico"><i data-icon="file-json-2"></i></div>
+  <div><h3>sarif</h3><div class="sub">Security tab</div></div>
+</div>
+<div class="card" id="o4" style="--c:var(--green);left:895px;top:1015px;width:245px">
+  <div class="ico"><i data-icon="git-pull-request"></i></div>
+  <div><h3>github</h3><div class="sub">inline on the PR diff</div></div>
+</div>
+
+<!-- Where it runs -->
+<div class="zone" id="zrun" style="--c:var(--cyan);left:40px;top:1160px;width:1120px;height:180px;border-style:dashed"><div class="zl">where it runs</div></div>
+<div class="card" id="r1" style="--c:var(--cyan);left:60px;top:1212px;width:265px">
+  <div class="ico"><i data-icon="circle-check"></i></div>
+  <div><h3>CI gate</h3><div class="sub">exit 1 stops the pipeline</div></div>
+</div>
+<div class="card" id="r2" style="--c:var(--cyan);left:345px;top:1212px;width:255px">
+  <div class="ico"><i data-icon="git-commit-horizontal"></i></div>
+  <div><h3>pre-commit</h3><div class="sub">before the commit exists</div></div>
+</div>
+<div class="card" id="r3" style="--c:var(--cyan);left:620px;top:1212px;width:255px">
+  <div class="ico"><i data-icon="workflow"></i></div>
+  <div><h3>Action</h3><div class="sub">one line in the workflow</div></div>
+</div>
+<div class="card" id="r4" style="--c:var(--cyan);left:895px;top:1212px;width:245px">
+  <div class="ico"><i data-icon="container"></i></div>
+  <div><h3>Docker</h3><div class="sub">no install at all</div></div>
+</div>
+
+<script>
+wire('zin:bottom@0.1786', 'loader:top', { label: 'parse', color: '#3b82f6', labelColor: '#60a5fa' });
+wire('loader:bottom', 'ctx:top', { color: '#3b82f6' });
+wire('ctx:right', 'rules:left@0.5', { label: 'check', color: '#f97316', labelColor: '#fb923c', at: [430, 585] });
+wire('ctx:bottom', 'filt:top', { color: '#3b82f6' });
+wire('filt:bottom', 'o1:top@0.5', { label: 'report', color: '#10b981', labelColor: '#34d399', at: [193, 935] });
+wire('filt:bottom@0.8', 'o2:top@0.4', { color: '#10b981' });
+wire('rules:bottom@0.03', 'o3:top@0.5', { color: '#10b981', mid: 905 });
+wire('rules:bottom@0.97', 'o4:top@0.5', { color: '#10b981', mid: 905 });
+</script>

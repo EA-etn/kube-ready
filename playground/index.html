@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>kube-ready playground</title>
+<meta name="description" content="Paste a Kubernetes manifest and see what kube-ready finds. Runs entirely in your browser: nothing is uploaded.">
+<style>
+  :root{--bg:#0b0d12;--card:#15181e;--text:#eef1f6;--muted:#9aa3b2;--line:#2a2f3a;--green:#10b981;--red:#f43f5e;--yellow:#eab308;--blue:#3b82f6;--purple:#8b5cf6}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 Inter,system-ui,sans-serif;
+    background-image:radial-gradient(rgba(255,255,255,.06) 1.2px,transparent 1.2px);background-size:26px 26px}
+  header{padding:22px 24px 10px;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:baseline}
+  header h1{margin:0;font-size:24px;letter-spacing:-.01em}
+  header h1 span{color:var(--muted);font-weight:500}
+  header p{margin:0;color:var(--muted)}
+  header a{color:#60a5fa;text-decoration:none}
+  main{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 24px 24px}
+  @media (max-width:900px){main{grid-template-columns:1fr}}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;min-height:420px;overflow:hidden}
+  .bar{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);font:600 13px "JetBrains Mono",ui-monospace,monospace;color:var(--muted)}
+  .bar .sp{flex:1}
+  button,select{font:600 13px Inter,system-ui,sans-serif;background:#1f2430;color:var(--text);border:1px solid #343a46;border-radius:8px;padding:6px 12px;cursor:pointer}
+  button.primary{background:var(--green);color:#06281c;border-color:var(--green)}
+  button:disabled{opacity:.5;cursor:default}
+  textarea{flex:1;width:100%;min-height:380px;resize:vertical;background:#0f1217;color:#d7dce6;border:0;padding:14px 16px;font:14px/1.5 "JetBrains Mono",ui-monospace,monospace;outline:none;tab-size:2}
+  #out{flex:1;padding:14px 16px;overflow:auto;font:14px/1.5 "JetBrains Mono",ui-monospace,monospace}
+  .f{display:grid;grid-template-columns:22px 70px 1fr;gap:8px;padding:8px 0;border-bottom:1px solid #1f242e;align-items:start}
+  .f .ic{font-weight:700}.e{color:#fb7185}.w{color:#fbbf24}.i{color:#60a5fa}.ok{color:#34d399}
+  .f .msg b{color:var(--text)}.f .msg{color:#d7dce6}.f .hint{color:var(--muted);font-family:Inter,system-ui,sans-serif;margin-top:3px}
+  .f .res{color:#67e8f9}
+  .sum{margin-bottom:10px;font-weight:700}
+  .status{color:var(--muted);font-family:Inter,system-ui,sans-serif}
+  .pill{display:inline-block;border-radius:999px;padding:2px 10px;font-size:12px;border:1px solid #343a46;color:var(--muted);margin-left:6px}
+  footer{padding:0 24px 24px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <h1>kube-ready <span>· playground</span></h1>
+  <p>Paste a manifest, get the verdict. Runs <b>entirely in your browser</b> with Pyodide: nothing is uploaded.
+     <a href="https://github.com/EA-etn/kube-ready">GitHub</a> · <a href="https://github.com/EA-etn/kube-ready#rules">rules</a></p>
+</header>
+<main>
+  <section class="panel">
+    <div class="bar">manifest.yaml <span class="sp"></span>
+      <select id="example"><option value="bad">example: the classic bad Deployment</option><option value="good">example: a ready Deployment</option><option value="cron">example: CronJob + Secret</option></select>
+      <button id="run" class="primary" disabled>Check</button></div>
+    <textarea id="src" spellcheck="false"></textarea>
+  </section>
+  <section class="panel">
+    <div class="bar">findings <span class="sp"></span><label><input type="checkbox" id="info" checked> show info</label><span id="ver" class="pill">loading…</span></div>
+    <div id="out"><div class="status" id="status">Loading Python in your browser (about 10 MB, once)…</div></div>
+  </section>
+</main>
+<footer>Same rules, same code as the CLI: the page loads the kube-ready wheel built from <code>main</code>. ⌘/Ctrl+Enter checks.</footer>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.28.3/full/pyodide.js"></script>
+<script>
+const EXAMPLES = {
+bad: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: shop
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: api}
+  template:
+    metadata:
+      labels: {app: api}
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/shop/api:latest
+          ports:
+            - containerPort: 3000
+`,
+good: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: shop
+  labels: {app.kubernetes.io/name: web}
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app.kubernetes.io/name: web}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: web}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector: {matchLabels: {app.kubernetes.io/name: web}}
+      containers:
+        - name: web
+          image: ghcr.io/example/web:1.4.2
+          resources:
+            requests: {cpu: 100m, memory: 128Mi}
+            limits: {memory: 256Mi}
+          livenessProbe: {httpGet: {path: /healthz, port: 8080}}
+          readinessProbe: {httpGet: {path: /ready, port: 8080}}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: web
+  namespace: shop
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: web}
+`,
+cron: `apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: nightly-report
+spec:
+  schedule: "0 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: report
+              image: myregistry/report
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: api-credentials
+type: Opaque
+stringData:
+  password: "hunter2"
+`};
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const ICON = { error: ['✖','e'], warning: ['▲','w'], info: ['ℹ','i'] };
+let py = null;
+
+$('src').value = EXAMPLES.bad;
+$('example').addEventListener('change', (e) => { $('src').value = EXAMPLES[e.target.value]; if (py) check(); });
+$('info').addEventListener('change', () => { if (py) check(); });
+$('run').addEventListener('click', check);
+document.addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') check(); });
+
+function render(report) {
+  const out = $('out');
+  if (report.error) { out.innerHTML = `<div class="sum e">✖ RDY000 invalid YAML (line ${report.line})</div><div class="status">${esc(report.error)}</div>`; return; }
+  const showInfo = $('info').checked;
+  const items = report.findings.filter((f) => showInfo || f.severity !== 'info');
+  const s = report.summary;
+  let html = items.length || s.errors || s.warnings
+    ? `<div class="sum">${s.errors} error${s.errors !== 1 ? 's' : ''}, ${s.warnings} warning${s.warnings !== 1 ? 's' : ''}, ${s.info} info across ${s.resources} resource${s.resources !== 1 ? 's' : ''}</div>`
+    : `<div class="sum ok">✔ Ready. ${s.resources} resource${s.resources !== 1 ? 's' : ''}, no findings.</div>`;
+  for (const f of items) {
+    const [ic, cls] = ICON[f.severity];
+    const res = f.resource.namespace ? `${f.resource.kind}/${f.resource.namespace}/${f.resource.name}` : `${f.resource.kind}/${f.resource.name}`;
+    html += `<div class="f"><span class="ic ${cls}">${ic}</span><span class="${cls}">${f.rule}</span><div><div class="msg"><span class="res">${esc(res)}</span> <span style="color:#6b7280">(line ${f.line})</span><br><b>${esc(f.title)}</b>: ${esc(f.message)}</div><div class="hint">↳ ${esc(f.hint)}</div></div></div>`;
+  }
+  out.innerHTML = html;
+}
+
+async function check() {
+  if (!py) return;
+  const text = $('src').value;
+  try {
+    const res = py.runPython(`import json; from kube_ready import api; json.dumps(api.check_text(_src))`, { globals: py.toPy({ _src: text }) });
+    render(JSON.parse(res));
+  } catch (e) { $('out').innerHTML = `<div class="status e">Unexpected error: ${esc(e.message)}</div>`; }
+}
+
+(async () => {
+  try {
+    py = await loadPyodide();
+    $('status').textContent = 'Installing kube-ready…';
+    await py.loadPackage(['pyyaml', 'micropip']);
+    const wheel = (await (await fetch('./wheel.txt', { cache: 'no-store' })).text()).trim();
+    const micropip = py.pyimport('micropip');
+    await micropip.install(new URL('./' + wheel, location.href).href, { deps: false });
+    const ver = py.runPython('import kube_ready; kube_ready.__version__');
+    $('ver').textContent = 'kube-ready ' + ver;
+    $('run').disabled = false;
+    await check();
+  } catch (e) {
+    $('status').innerHTML = `Could not load the playground: ${esc(e.message)}. <br>You can always run it locally: <code>pipx install kube-ready</code>.`;
+    console.error(e);
+  }
+})();
+</script>
+</body>
+</html>

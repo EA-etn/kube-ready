@@ -1,0 +1,49 @@
+<!-- size: 1200x1080 -->
+<div class="title">
+  <div class="eyebrow">kube-ready · scenarios</div>
+  <h1>One tool, seven places it earns its keep</h1>
+</div>
+
+<div class="card col" style="--c:var(--purple);left:40px;top:140px;width:550px">
+  <div class="head"><div class="ico"><i data-icon="git-branch"></i></div>
+    <div><h3>GitOps repository</h3><div class="sub">Argo CD or Flux: check apps/ before the merge, not after the sync</div></div></div>
+  <div class="pills" style="--c:var(--purple);margin-top:12px"><span class="pill mono">kube-ready check apps/ platform/</span></div>
+</div>
+<div class="card col" style="--c:var(--purple);left:610px;top:140px;width:550px">
+  <div class="head"><div class="ico"><i data-icon="package"></i></div>
+    <div><h3>Helm and Kustomize</h3><div class="sub">Lint the rendered output, the thing the cluster actually sees</div></div></div>
+  <div class="pills" style="--c:var(--purple);margin-top:12px"><span class="pill mono">helm template . | kube-ready check -</span></div>
+</div>
+
+<div class="card col" style="--c:var(--blue);left:40px;top:380px;width:550px">
+  <div class="head"><div class="ico"><i data-icon="git-pull-request"></i></div>
+    <div><h3>Pull request review</h3><div class="sub">Findings inline on the diff and in the Security tab via SARIF</div></div></div>
+  <div class="pills" style="--c:var(--blue);margin-top:12px"><span class="pill mono">uses: EA-etn/kube-ready@v0.1.0</span></div>
+</div>
+<div class="card col" style="--c:var(--blue);left:610px;top:380px;width:550px">
+  <div class="head"><div class="ico"><i data-icon="git-commit-horizontal"></i></div>
+    <div><h3>Pre-commit hook</h3><div class="sub">The mistake never leaves the laptop</div></div></div>
+  <div class="pills" style="--c:var(--blue);margin-top:12px"><span class="pill mono">- id: kube-ready</span></div>
+</div>
+
+<div class="card col" style="--c:var(--orange);left:40px;top:620px;width:550px">
+  <div class="head"><div class="ico"><i data-icon="arrow-up-circle"></i></div>
+    <div><h3>Cluster upgrade</h3><div class="sub">Removed API versions found before Kubernetes refuses them</div></div></div>
+  <div class="pills" style="--c:var(--orange);margin-top:12px"><span class="pill mono">RDY015 · batch/v1beta1 → batch/v1</span></div>
+</div>
+<div class="card col" style="--c:var(--orange);left:610px;top:620px;width:550px">
+  <div class="head"><div class="ico"><i data-icon="lock"></i></div>
+    <div><h3>Security hardening</h3><div class="sub">Root, privileged, capabilities, seccomp: the restricted Pod Security Standard</div></div></div>
+  <div class="pills" style="--c:var(--orange);margin-top:12px"><span class="pill mono">--fail-on warning</span></div>
+</div>
+
+<div class="card col" style="--c:var(--green);left:40px;top:860px;width:550px">
+  <div class="head"><div class="ico"><i data-icon="history"></i></div>
+    <div><h3>Big legacy repository</h3><div class="sub">Record today's findings, fail only on new ones, shrink the baseline over time</div></div></div>
+  <div class="pills" style="--c:var(--green);margin-top:12px"><span class="pill mono">kube-ready baseline manifests/</span></div>
+</div>
+<div class="card col" style="--c:var(--green);left:610px;top:860px;width:550px">
+  <div class="head"><div class="ico"><i data-icon="settings-2"></i></div>
+    <div><h3>Platform team policy</h3><div class="sub">One config shared by every repo: severities, disabled rules, the bar everyone meets</div></div></div>
+  <div class="pills" style="--c:var(--green);margin-top:12px"><span class="pill mono">.kube-ready.yaml</span></div>
+</div>
