@@ -43,4 +43,5 @@ def test_api_does_not_need_rich():
 
     spec = importlib.util.find_spec("kube_ready.api")
     assert spec is not None and spec.origin is not None
-    assert "rich" not in Path(spec.origin).read_text(encoding="utf-8")
+    src = Path(spec.origin).read_text(encoding="utf-8")
+    assert "import rich" not in src and "from rich" not in src
