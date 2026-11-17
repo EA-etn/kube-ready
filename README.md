@@ -76,6 +76,7 @@ kube-ready check manifests/ --verbose                # show how to fix each find
 kube-ready check manifests/ --fail-on warning        # stricter CI
 kube-ready check manifests/ --format json            # for scripts
 kube-ready check manifests/ --format sarif -o report.sarif   # for GitHub code scanning
+kube-ready check manifests/ --format github                  # annotations inline on the PR diff
 kube-ready rules                                     # the full list, with rationale
 ```
 
@@ -156,6 +157,7 @@ to shrink it. `baseline: .kube-ready-baseline.json` in `.kube-ready.yaml` makes 
     path: manifests/
     fail-on: warning
     sarif-file: kube-ready.sarif    # optional
+    # annotations: "false"         # plain text instead of inline PR annotations
 
 - uses: github/codeql-action/upload-sarif@v3    # findings appear in the Security tab
   if: always()
@@ -227,8 +229,10 @@ cosign verify ghcr.io/ea-etn/kube-ready:0.1.0 \
 
 ```bash
 pip install -e ".[dev]"
-make lint test check
+make lint test check      # ruff, mypy --strict, pytest, the examples
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add a rule.
 
 ## Roadmap
 

@@ -75,6 +75,7 @@ kube-ready check manifests/ --verbose                # cómo arreglar cada halla
 kube-ready check manifests/ --fail-on warning        # CI más estricto
 kube-ready check manifests/ --format json            # para scripts
 kube-ready check manifests/ --format sarif -o report.sarif   # para code scanning de GitHub
+kube-ready check manifests/ --format github                  # anotaciones en el diff del PR
 kube-ready rules                                     # la lista completa, con el porqué
 ```
 
@@ -155,6 +156,7 @@ encogerlo. `baseline: .kube-ready-baseline.json` en `.kube-ready.yaml` lo deja p
     path: manifests/
     fail-on: warning
     sarif-file: kube-ready.sarif    # opcional
+    # annotations: "false"         # texto plano en vez de anotaciones en el PR
 
 - uses: github/codeql-action/upload-sarif@v3    # los hallazgos salen en la pestaña Security
   if: always()
@@ -227,8 +229,10 @@ cosign verify ghcr.io/ea-etn/kube-ready:0.1.0 \
 
 ```bash
 pip install -e ".[dev]"
-make lint test check
+make lint test check      # ruff, mypy --strict, pytest, los ejemplos
 ```
+
+En [CONTRIBUTING.md](CONTRIBUTING.md) está cómo añadir una regla.
 
 ## Hoja de ruta
 

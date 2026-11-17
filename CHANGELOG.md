@@ -10,6 +10,6 @@ First release.
   Ingress without TLS, Service selecting no pods.
 - `kube-ready baseline` and `check --baseline` to adopt gradually in big repositories.
 - Input from files, directories, multi-document YAML, `kind: List` and stdin.
-- Output as text, JSON and SARIF 2.1.0.
+- Output as text, JSON, SARIF 2.1.0 and GitHub Actions annotations.
 - Config file, `--disable`, per-resource `kube-ready/ignore` annotation, `--fail-on`.
 - GitHub Action, pre-commit hook and multi-arch Docker image.
