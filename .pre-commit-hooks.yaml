@@ -1,0 +1,7 @@
+- id: kube-ready
+  name: kube-ready
+  description: Check Kubernetes manifests for production readiness.
+  entry: kube-ready check
+  language: python
+  files: \.ya?ml$
+  pass_filenames: true

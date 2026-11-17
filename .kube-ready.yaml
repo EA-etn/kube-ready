@@ -1,0 +1,7 @@
+# Example config (this one is used when you run kube-ready from the repo root).
+# Rule ids: kube-ready rules
+disable:
+  - RDY017   # Helm/Argo CD set the namespace at release time
+severity:
+  RDY014: error   # a Secret in Git is never acceptable here
+fail-on: warning

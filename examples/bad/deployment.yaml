@@ -1,0 +1,50 @@
+# The classic "it works on my laptop" Deployment. Run: kube-ready check examples/bad -v
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      hostNetwork: true
+      containers:
+        - name: api
+          image: myregistry/api:latest
+          ports:
+            - containerPort: 3000
+          securityContext:
+            privileged: true
+      volumes:
+        - name: data
+          hostPath:
+            path: /var/lib/api
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: api-credentials
+type: Opaque
+stringData:
+  password: "hunter2"
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: nightly-report
+spec:
+  schedule: "0 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: report
+              image: myregistry/report
