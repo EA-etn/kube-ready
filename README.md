@@ -244,7 +244,7 @@ cosign verify ghcr.io/ea-etn/kube-ready:0.1.0 \
 ```
 
 - **Least privilege**: workflows are read-only by default and widen permissions per job.
-- **Non-root, minimal image**: `python:3.13-slim`, uid 10001, nothing but the package.
+- **Non-root, minimal image**: `python:3.15-slim`, uid 10001, nothing but the package.
 
 ## Programmatic use
 

@@ -244,7 +244,7 @@ cosign verify ghcr.io/ea-etn/kube-ready:0.1.0 \
 ```
 
 - **Mínimo privilegio**: los workflows son de solo lectura por defecto y amplían permisos por job.
-- **Imagen mínima y sin root**: `python:3.13-slim`, uid 10001, nada más que el paquete.
+- **Imagen mínima y sin root**: `python:3.15-slim`, uid 10001, nada más que el paquete.
 
 ## Uso desde Python
 
