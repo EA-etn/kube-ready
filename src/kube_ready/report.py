@@ -20,11 +20,21 @@ ICON = {
 COLOR = {Severity.ERROR: "red", Severity.WARNING: "yellow", Severity.INFO: "blue"}
 
 
+def _baseline_note(report: Report) -> str:
+    if not report.baseline_file:
+        return ""
+    return (
+        f" [dim]({report.suppressed} known finding{'s' if report.suppressed != 1 else ''} "
+        f"hidden by baseline {report.baseline_file})[/]"
+    )
+
+
 def render_text(report: Report, console: Console, verbose: bool = False) -> None:
     if not report.findings:
         console.print(
             f"[bold green]✔ Ready.[/] {len(report.resources)} resources in "
-            f"{len(report.files)} files, no findings."
+            f"{len(report.files)} files, no{' new' if report.baseline_file else ''} findings."
+            + _baseline_note(report)
         )
         return
     for source, group in groupby(report.findings, key=lambda f: f.resource.source):
@@ -44,6 +54,7 @@ def render_text(report: Report, console: Console, verbose: bool = False) -> None
         f"[bold]{w} warning{'s' if w != 1 else ''}[/], "
         f"[bold]{i} info[/] "
         f"across {len(report.resources)} resources in {len(report.files)} files."
+        + _baseline_note(report)
     )
     if not verbose:
         console.print(
@@ -62,6 +73,7 @@ def render_json(report: Report) -> str:
                 "errors": report.count(Severity.ERROR),
                 "warnings": report.count(Severity.WARNING),
                 "info": report.count(Severity.INFO),
+                "baselined": report.suppressed,
             },
             "findings": [f.to_dict() for f in report.findings],
         },

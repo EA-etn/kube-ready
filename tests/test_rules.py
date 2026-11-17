@@ -32,7 +32,7 @@ spec:
     metadata:
       labels: {{app: app}}
     spec:
-      securityContext: {{runAsNonRoot: true}}
+      securityContext: {{runAsNonRoot: true, seccompProfile: {{type: RuntimeDefault}}}}
       topologySpreadConstraints:
         - {{maxSkew: 1, topologyKey: kubernetes.io/hostname, whenUnsatisfiable: DoNotSchedule,
            labelSelector: {{matchLabels: {{app: app}}}}}}
@@ -43,7 +43,8 @@ spec:
           resources: {{requests: {{cpu: 10m, memory: 16Mi}}, limits: {{memory: 32Mi}}}}
           livenessProbe: {{httpGet: {{path: /, port: 80}}}}
           readinessProbe: {{httpGet: {{path: /, port: 80}}}}
-          securityContext: {{allowPrivilegeEscalation: false, readOnlyRootFilesystem: true}}
+          securityContext: {{allowPrivilegeEscalation: false, readOnlyRootFilesystem: true,
+            capabilities: {{drop: [ALL]}}}}
           {container}
 ---
 apiVersion: policy/v1
@@ -119,12 +120,14 @@ spec:
   template:
     spec:
       restartPolicy: Never
-      securityContext: {runAsNonRoot: true}
+      securityContext: {runAsNonRoot: true, seccompProfile: {type: RuntimeDefault}}
       containers:
         - name: once
           image: example/once:1.0.0
           resources: {requests: {cpu: 1m, memory: 1Mi}, limits: {memory: 1Mi}}
-          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true}
+          securityContext:
+            {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true,
+             capabilities: {drop: [ALL]}}
 """
     assert check(job) == []
 
@@ -224,20 +227,24 @@ def test_privilege_escalation_default_is_flagged(check):
 
 
 def test_run_as_non_root_pod_level(check):
-    text = _deployment().replace("securityContext: {runAsNonRoot: true}", "")
+    text = _deployment().replace(
+        "securityContext: {runAsNonRoot: true, seccompProfile: {type: RuntimeDefault}}", ""
+    )
     assert "RDY011" in check(text)
 
 
 def test_run_as_user_counts(check):
     text = _deployment().replace(
-        "securityContext: {runAsNonRoot: true}", "securityContext: {runAsUser: 1000}"
+        "securityContext: {runAsNonRoot: true, seccompProfile: {type: RuntimeDefault}}",
+        "securityContext: {runAsUser: 1000}",
     )
     assert "RDY011" not in check(text)
 
 
 def test_run_as_user_zero_is_root(check):
     text = _deployment().replace(
-        "securityContext: {runAsNonRoot: true}", "securityContext: {runAsUser: 0}"
+        "securityContext: {runAsNonRoot: true, seccompProfile: {type: RuntimeDefault}}",
+        "securityContext: {runAsUser: 0}",
     )
     assert "RDY011" in check(text)
 
@@ -302,12 +309,14 @@ spec:
     spec:
       template:
         spec:
-          securityContext: {runAsNonRoot: true}
+          securityContext: {runAsNonRoot: true, seccompProfile: {type: RuntimeDefault}}
           containers:
             - name: c
               image: example/c:1.0.0
               resources: {requests: {cpu: 1m, memory: 1Mi}, limits: {memory: 1Mi}}
-              securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true}
+              securityContext:
+                {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true,
+                 capabilities: {drop: [ALL]}}
 """
     assert check(cron) == ["RDY018"]
     assert (
@@ -360,3 +369,84 @@ items:
 
 def test_non_kubernetes_documents_are_skipped(check):
     assert check("just: yaml\n---\n- a\n- b\n---\n") == []
+
+
+# RDY019-RDY022
+def test_ingress_without_tls(check):
+    ingress = """
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata: {name: web, namespace: ns}
+spec:
+  rules: [{host: example.com, http: {paths: [{path: /, pathType: Prefix,
+           backend: {service: {name: web, port: {number: 80}}}}]}}]
+"""
+    assert check(ingress) == ["RDY019"]
+    assert check(ingress + "  tls: [{hosts: [example.com], secretName: web-tls}]\n") == []
+
+
+def _service(selector: str, namespace: str = "ns", kind_type: str = "") -> str:
+    return f"""
+---
+apiVersion: v1
+kind: Service
+metadata: {{name: app, namespace: {namespace}}}
+spec:
+  {kind_type}
+  selector: {selector}
+  ports: [{{port: 80}}]
+"""
+
+
+def test_service_matching_pods_is_fine(check):
+    assert check(_deployment() + _service("{app: app}")) == []
+
+
+def test_service_selecting_nothing(check):
+    assert "RDY020" in check(_deployment() + _service("{app: typo}"))
+
+
+def test_service_alone_is_not_judged(check):
+    assert check(_service("{app: anything}")) == []
+
+
+def test_service_other_namespace_is_not_judged(check):
+    assert "RDY020" not in check(_deployment() + _service("{app: typo}", namespace="other"))
+
+
+def test_external_name_service_is_skipped(check):
+    text = _deployment() + _service("{app: typo}", kind_type="type: ExternalName")
+    assert "RDY020" not in check(text)
+
+
+def test_capabilities_not_dropped(check):
+    sc = "securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true}"
+    assert "RDY021" in check(_deployment(container=sc))
+
+
+def test_capabilities_drop_all_case_insensitive(check):
+    sc = (
+        "securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, "
+        "capabilities: {drop: [all]}}"
+    )
+    assert "RDY021" not in check(_deployment(container=sc))
+
+
+def test_seccomp_missing(check):
+    text = _deployment().replace(
+        "securityContext: {runAsNonRoot: true, seccompProfile: {type: RuntimeDefault}}",
+        "securityContext: {runAsNonRoot: true}",
+    )
+    assert "RDY022" in check(text)
+
+
+def test_seccomp_at_container_level(check):
+    text = _deployment(
+        container="securityContext: {allowPrivilegeEscalation: false, "
+        "readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}, "
+        "seccompProfile: {type: RuntimeDefault}}"
+    ).replace(
+        "securityContext: {runAsNonRoot: true, seccompProfile: {type: RuntimeDefault}}",
+        "securityContext: {runAsNonRoot: true}",
+    )
+    assert "RDY022" not in check(text)

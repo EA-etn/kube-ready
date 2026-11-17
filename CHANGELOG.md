@@ -4,9 +4,11 @@
 
 First release.
 
-- 18 rules: images, resources, probes, availability (replicas, PDB, spread), security
-  (privileged, host namespaces, escalation, root, read-only FS, hostPath), Secrets in Git,
-  removed API versions, labels, namespaces, CronJob concurrency.
+- 22 rules: images, resources, probes, availability (replicas, PDB, spread), security
+  (privileged, host namespaces, escalation, root, read-only FS, hostPath, capabilities,
+  seccomp), Secrets in Git, removed API versions, labels, namespaces, CronJob concurrency,
+  Ingress without TLS, Service selecting no pods.
+- `kube-ready baseline` and `check --baseline` to adopt gradually in big repositories.
 - Input from files, directories, multi-document YAML, `kind: List` and stdin.
 - Output as text, JSON and SARIF 2.1.0.
 - Config file, `--disable`, per-resource `kube-ready/ignore` annotation, `--fail-on`.

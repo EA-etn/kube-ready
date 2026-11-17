@@ -130,6 +130,12 @@ class Finding:
     resource: Resource
     hint: str = ""
 
+    @property
+    def fingerprint(self) -> str:
+        """Stable identity of a finding, independent of file and line (for baselines)."""
+        r = self.resource
+        return f"{self.rule_id}|{r.kind}|{r.namespace or ''}|{r.name}|{self.message}"
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "rule": self.rule_id,
@@ -151,6 +157,8 @@ class Report:
     findings: list[Finding] = field(default_factory=list)
     resources: list[Resource] = field(default_factory=list)
     files: list[str] = field(default_factory=list)
+    suppressed: int = 0
+    baseline_file: str | None = None
 
     def count(self, severity: Severity) -> int:
         return sum(1 for f in self.findings if f.severity == severity)

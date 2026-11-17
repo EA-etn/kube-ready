@@ -31,7 +31,7 @@ spec:
     metadata:
       labels: {app: web}
     spec:
-      securityContext: {runAsNonRoot: true}
+      securityContext: {runAsNonRoot: true, seccompProfile: {type: RuntimeDefault}}
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
@@ -48,6 +48,7 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget

@@ -40,7 +40,7 @@ examples/bad/deployment.yaml
        ↳ Migrate to `batch/v1`.
   …
 
-6 errors, 13 warnings, 7 info across 3 resources in 1 files.
+6 errors, 15 warnings, 13 info across 5 resources in 1 files.
 ```
 
 ## ¿Otro linter más?
@@ -103,8 +103,12 @@ Códigos de salida: `0` listo, `1` hallazgos iguales o peores que `--fail-on` (p
 | RDY016 | info | las cargas llevan la etiqueta `app.kubernetes.io/name` |
 | RDY017 | info | los recursos con namespace lo declaran en `metadata.namespace` (desactívala en charts de Helm) |
 | RDY018 | warning | los CronJobs tienen `concurrencyPolicy` `Forbid` o `Replace` |
+| RDY019 | warning | los Ingress tienen sección `tls` |
+| RDY020 | warning | los Services seleccionan al menos un pod de su namespace en la ejecución |
+| RDY021 | info | los contenedores sueltan todas las capabilities (`capabilities.drop: [ALL]`) |
+| RDY022 | info | hay perfil seccomp (`RuntimeDefault`), a nivel de pod o contenedor |
 
-Las reglas que cruzan recursos (RDY006, RDY007) miran todos los manifiestos de la misma ejecución:
+Las reglas que cruzan recursos (RDY006, RDY007, RDY020) miran todos los manifiestos de la misma ejecución:
 pasa la carpeta entera, no un fichero suelto, para evitar falsos positivos.
 
 ## Configuración
@@ -126,6 +130,20 @@ metadata:
   annotations:
     kube-ready/ignore: "RDY006, RDY007"   # una réplica es suficiente para esta herramienta interna
 ```
+
+## Adoptarlo en un repo grande
+
+¿Cientos de hallazgos el primer día? Regístralos y falla solo con los nuevos:
+
+```bash
+kube-ready baseline manifests/            # escribe .kube-ready-baseline.json
+git add .kube-ready-baseline.json
+kube-ready check manifests/ --baseline .kube-ready-baseline.json --fail-on warning
+```
+
+Cada entrada del baseline es la regla, el recurso y el mensaje, no el fichero ni la línea: mover
+un manifiesto no lo resucita. Ve arreglando con calma y regenera el baseline cuando quieras
+encogerlo. `baseline: .kube-ready-baseline.json` en `.kube-ready.yaml` lo deja por defecto.
 
 ## En el CI
 
@@ -197,10 +215,11 @@ make lint test check
 
 ## Hoja de ruta
 
-- [x] 18 reglas, salida SARIF, GitHub Action, hook de pre-commit, imagen multi-arch
-- [ ] Publicar en PyPI (trusted publishing) y firmar la imagen con cosign
-- [ ] `Service` sin pods que lo respalden, `Ingress` sin TLS
-- [ ] Fichero baseline para adoptar poco a poco en repos grandes (`--baseline`)
+- [x] 22 reglas, salida SARIF, GitHub Action, hook de pre-commit, imagen multi-arch
+- [x] `Service` sin pods que lo respalden, `Ingress` sin TLS, capabilities, seccomp
+- [x] Fichero baseline para adoptar poco a poco en repos grandes (`--baseline`)
+- [ ] Publicar en PyPI (trusted publishing)
+- [ ] Cobertura de Gateway API (`HTTPRoute`) y `NetworkPolicy`
 
 ## Licencia
 

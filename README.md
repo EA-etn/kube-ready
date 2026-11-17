@@ -40,7 +40,7 @@ examples/bad/deployment.yaml
        ↳ Migrate to `batch/v1`.
   …
 
-6 errors, 13 warnings, 7 info across 3 resources in 1 files.
+6 errors, 15 warnings, 13 info across 5 resources in 1 files.
 ```
 
 ## Why another linter?
@@ -104,8 +104,12 @@ config error.
 | RDY016 | info | workloads carry the `app.kubernetes.io/name` label |
 | RDY017 | info | namespaced resources set `metadata.namespace` (disable for Helm charts) |
 | RDY018 | warning | CronJobs set `concurrencyPolicy` to `Forbid` or `Replace` |
+| RDY019 | warning | Ingresses have a `tls` section |
+| RDY020 | warning | Services select at least one pod template of the same namespace in the run |
+| RDY021 | info | containers drop all Linux capabilities (`capabilities.drop: [ALL]`) |
+| RDY022 | info | a seccomp profile is set (`RuntimeDefault`), pod or container level |
 
-Cross-resource rules (RDY006, RDY007) look at every manifest you pass in the same run, so
+Cross-resource rules (RDY006, RDY007, RDY020) look at every manifest you pass in the same run, so
 check a whole directory rather than one file at a time to avoid false positives.
 
 ## Configure
@@ -127,6 +131,20 @@ metadata:
   annotations:
     kube-ready/ignore: "RDY006, RDY007"   # single replica is fine for this dev tool
 ```
+
+## Adopt it in a big repository
+
+Hundreds of findings on day one? Record them and only fail on new ones:
+
+```bash
+kube-ready baseline manifests/            # writes .kube-ready-baseline.json
+git add .kube-ready-baseline.json
+kube-ready check manifests/ --baseline .kube-ready-baseline.json --fail-on warning
+```
+
+A baseline entry is the rule, the resource and the message, not the file and line, so moving a
+manifest does not resurrect it. Fix things over time and regenerate the baseline when you want
+to shrink it. `baseline: .kube-ready-baseline.json` in `.kube-ready.yaml` makes it the default.
 
 ## In CI
 
@@ -197,10 +215,11 @@ make lint test check
 
 ## Roadmap
 
-- [x] 18 rules, SARIF output, GitHub Action, pre-commit hook, multi-arch image
-- [ ] Publish to PyPI (trusted publishing) and sign the image with cosign
-- [ ] `Service` without matching pods, `Ingress` without TLS
-- [ ] Baseline file to adopt gradually in big repositories (`--baseline`)
+- [x] 22 rules, SARIF output, GitHub Action, pre-commit hook, multi-arch image
+- [x] `Service` without matching pods, `Ingress` without TLS, capabilities, seccomp
+- [x] Baseline file to adopt gradually in big repositories (`--baseline`)
+- [ ] Publish to PyPI (trusted publishing)
+- [ ] Gateway API (`HTTPRoute`) and `NetworkPolicy` coverage
 
 ## License
 

@@ -22,6 +22,7 @@ class Config:
     disable: set[str] = field(default_factory=set)
     severity: dict[str, Severity] = field(default_factory=dict)
     fail_on: str = "error"
+    baseline: str | None = None
 
 
 def load_config(path: str | None, known_rules: set[str]) -> Config:
@@ -60,6 +61,12 @@ def load_config(path: str | None, known_rules: set[str]) -> Config:
         if str(fail_on) not in FAIL_ON_CHOICES:
             raise ConfigError(f"{file}: 'fail-on' must be one of {', '.join(FAIL_ON_CHOICES)}")
         cfg.fail_on = str(fail_on)
+
+    baseline = data.get("baseline")
+    if baseline is not None:
+        if not isinstance(baseline, str) or not baseline:
+            raise ConfigError(f"{file}: 'baseline' must be a file path")
+        cfg.baseline = baseline
     return cfg
 
 

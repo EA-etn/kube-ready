@@ -521,6 +521,99 @@ def cronjob_concurrency(res: Resource, _: Context) -> Iterator[Finding]:
         )
 
 
+@rule(
+    "RDY019",
+    Severity.WARNING,
+    "Ingress without TLS",
+    "An Ingress with no `tls` section serves plain HTTP: credentials and session cookies "
+    "cross the network in clear text.",
+)
+def ingress_tls(res: Resource, _: Context) -> Iterator[Finding]:
+    if res.kind != "Ingress":
+        return
+    if not res.spec.get("tls"):
+        yield _finding(
+            res,
+            "RDY019",
+            "has no tls section",
+            "Add `spec.tls` with a secretName (cert-manager can issue the certificate).",
+        )
+
+
+@rule(
+    "RDY020",
+    Severity.WARNING,
+    "Service selects no pods",
+    "The Service's selector matches no pod template among the workloads in the same "
+    "namespace of this run, so it would have no endpoints. Only evaluated when the run "
+    "includes at least one workload in that namespace.",
+)
+def service_selector(res: Resource, ctx: Context) -> Iterator[Finding]:
+    if res.kind != "Service" or res.spec.get("type") == "ExternalName":
+        return
+    selector = res.spec.get("selector")
+    if not isinstance(selector, dict) or not selector:
+        return
+    candidates = [w for w in ctx.resources if w.is_workload and w.namespace == res.namespace]
+    if not candidates:
+        return
+    for w in candidates:
+        labels = w.pod_labels()
+        if all(labels.get(k) == v for k, v in selector.items()):
+            return
+    yield _finding(
+        res,
+        "RDY020",
+        "selector matches no pod template in this run",
+        "Make `spec.selector` match the pod template labels of the workload it fronts.",
+    )
+
+
+@rule(
+    "RDY021",
+    Severity.INFO,
+    "Linux capabilities not dropped",
+    "Containers start with a default set of capabilities (CHOWN, NET_RAW, SETUID...). "
+    "Dropping ALL and adding back only what the process needs is the baseline of the "
+    "restricted Pod Security Standard.",
+)
+def drop_capabilities(res: Resource, _: Context) -> Iterator[Finding]:
+    for role, c in res.containers():
+        caps = (c.get("securityContext") or {}).get("capabilities") or {}
+        drop = caps.get("drop") or []
+        if "ALL" not in [str(x).upper() for x in drop]:
+            yield _finding(
+                res,
+                "RDY021",
+                f'{role} "{c.get("name", "?")}" does not drop all capabilities',
+                "Set `securityContext.capabilities.drop: [ALL]`; add back only what is needed.",
+            )
+
+
+@rule(
+    "RDY022",
+    Severity.INFO,
+    "No seccomp profile",
+    "Without a seccomp profile every syscall is allowed. `RuntimeDefault` blocks the "
+    "dangerous ones at no cost and is required by the restricted Pod Security Standard.",
+)
+def seccomp(res: Resource, _: Context) -> Iterator[Finding]:
+    spec = res.pod_spec()
+    if spec is None:
+        return
+    pod_type = ((spec.get("securityContext") or {}).get("seccompProfile") or {}).get("type")
+    for role, c in res.containers():
+        c_type = ((c.get("securityContext") or {}).get("seccompProfile") or {}).get("type")
+        if (c_type or pod_type) in ("RuntimeDefault", "Localhost"):
+            continue
+        yield _finding(
+            res,
+            "RDY022",
+            f'{role} "{c.get("name", "?")}" has no seccomp profile',
+            "Set `securityContext.seccompProfile.type: RuntimeDefault` (pod or container level).",
+        )
+
+
 # ---------------------------------------------------------------------- engine
 
 IGNORE_ANNOTATION = "kube-ready/ignore"
