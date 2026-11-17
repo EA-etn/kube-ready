@@ -1,6 +1,6 @@
 """A tiny programmatic API: one call, plain dictionaries in and out.
 
-Used by the browser playground (Pyodide) and handy for scripts. It does not import rich.
+Used by the browser playground (Pyodide) and handy for scripts. No terminal dependencies.
 """
 
 from __future__ import annotations
