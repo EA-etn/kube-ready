@@ -18,6 +18,18 @@ Genera cada texto de `es/GUION.md` por separado y guárdalo como `01.wav`, `02.w
 Sirve también para corregir una sola escena de la opción A: un `07.wav` sustituye al trozo 7 de
 `completo.wav`.
 
+## Si las pausas entre escenas no se notan
+
+Algunas voces ignoran `<long pause>`. Entonces:
+
+```bash
+pip install librosa numpy
+python docs/video/src/align.py es    # escribe es/completo.cortes.txt
+```
+
+Alinea una lectura sintética del guion con tu audio y escribe los 12 tiempos de corte. Puedes
+retocarlos a mano en ese fichero.
+
 ## Regenerar el vídeo
 
 ```bash

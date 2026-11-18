@@ -44,9 +44,17 @@ function splitFull(n, narration) {
     let m = line.match(/silence_start: ([\d.]+)/); if (m) s0 = +m[1];
     m = line.match(/silence_end: ([\d.]+) \| silence_duration: ([\d.]+)/); if (m && s0 !== null) { sil.push({ start: s0, end: +m[1], d: +m[2] }); s0 = null; }
   }
+  const cutFile = path.join(VO_DIR, f.replace(/\.[^.]+$/, '.cortes.txt'));
+  let cuts;
+  if (fs.existsSync(cutFile)) {
+    cuts = fs.readFileSync(cutFile, 'utf8').split('\n').map((l) => l.replace(/#.*/, '').trim()).filter(Boolean).map(Number);
+    if (cuts.length !== n - 1 || cuts.some(isNaN)) throw new Error(`${cutFile}: need ${n - 1} cut times, found ${cuts.length}`);
+    console.log(`  cuts from ${path.basename(cutFile)}`);
+  } else {
   const inner = sil.filter((x) => x.start > 0.5 && x.end < total - 0.5);
-  if (inner.length < n - 1) throw new Error(`${f}: found ${inner.length} pauses, need ${n - 1}. Leave a long pause between scenes.`);
-  const cuts = inner.sort((a, b) => b.d - a.d).slice(0, n - 1).sort((a, b) => a.start - b.start).map((x) => (x.start + x.end) / 2);
+  if (inner.length < n - 1) throw new Error(`${f}: found ${inner.length} pauses, need ${n - 1}. Run align.py or leave a long pause between scenes.`);
+  cuts = inner.sort((a, b) => b.d - a.d).slice(0, n - 1).sort((a, b) => a.start - b.start).map((x) => (x.start + x.end) / 2);
+  }
   const bounds = [0, ...cuts, total];
   // Sanity check: each piece should be roughly proportional to the length of its text.
   const chars = narration.map((x) => x.length), sumC = chars.reduce((a, b) => a + b, 0);
