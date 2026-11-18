@@ -2,7 +2,7 @@
 // Usage: node build.js --production explainer --lang es [--fps 12] [--gif] [--out ../]
 // Explainer narration is synthesised with espeak-ng + MBROLA voices (apt: espeak-ng mbrola mbrola-es1 mbrola-en1).
 const { chromium } = require('playwright');
-const { execFileSync } = require('child_process');
+const { execFileSync, spawnSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -31,6 +31,36 @@ function tts(text, i) {
   return wav;
 }
 
+// One file with the whole narration (completo.wav / full.wav): split at the N-1 longest pauses.
+function splitFull(n, narration) {
+  if (!fs.existsSync(VO_DIR)) return null;
+  const f = fs.readdirSync(VO_DIR).find((x) => /^(completo|full)\.(wav|mp3|m4a|ogg|flac|aac)$/i.test(x));
+  if (!f) return null;
+  const src = path.join(VO_DIR, f);
+  const total = dur(src);
+  const text = spawnSync('ffmpeg', ['-v', 'info', '-i', src, '-af', 'silencedetect=noise=-38dB:d=0.45', '-f', 'null', '-'], { encoding: 'utf8' }).stderr;
+  const sil = []; let s0 = null;
+  for (const line of text.split('\n')) {
+    let m = line.match(/silence_start: ([\d.]+)/); if (m) s0 = +m[1];
+    m = line.match(/silence_end: ([\d.]+) \| silence_duration: ([\d.]+)/); if (m && s0 !== null) { sil.push({ start: s0, end: +m[1], d: +m[2] }); s0 = null; }
+  }
+  const inner = sil.filter((x) => x.start > 0.5 && x.end < total - 0.5);
+  if (inner.length < n - 1) throw new Error(`${f}: found ${inner.length} pauses, need ${n - 1}. Leave a long pause between scenes.`);
+  const cuts = inner.sort((a, b) => b.d - a.d).slice(0, n - 1).sort((a, b) => a.start - b.start).map((x) => (x.start + x.end) / 2);
+  const bounds = [0, ...cuts, total];
+  // Sanity check: each piece should be roughly proportional to the length of its text.
+  const chars = narration.map((x) => x.length), sumC = chars.reduce((a, b) => a + b, 0);
+  const clips = [];
+  for (let i = 0; i < n; i++) {
+    const a = bounds[i], b = bounds[i + 1], got = b - a, want = (chars[i] / sumC) * total;
+    const flag = got < want * 0.55 || got > want * 1.6 ? '  ⚠ check this scene' : '';
+    console.log(`  scene ${String(i + 1).padStart(2, '0')}: ${a.toFixed(1)}–${b.toFixed(1)}s (${got.toFixed(1)}s, expected ~${want.toFixed(1)}s)${flag}`);
+    const out = path.join(tmp, `full_${i}.wav`);
+    run('ffmpeg', ['-y', '-v', 'error', '-i', src, '-ss', a.toFixed(3), '-to', b.toFixed(3), out]);
+    clips.push(out);
+  }
+  return clips;
+}
 function findVoiceover(id) {
   if (!fs.existsSync(VO_DIR)) return null;
   const num = id.split('-')[0];
@@ -52,6 +82,7 @@ function exportScript(ids, narration) {
     : `# Voice-over script (${lang})\n\nOne audio file per scene, named by its number (01.wav, 02.wav... or 01-intro.wav), in this folder.\nFormats: wav, mp3, m4a, ogg, flac.\n\nStyle instruction for Gemini:\n\n> Read in clear, friendly English, like a calm technical walkthrough. Natural pauses at commas.\n\n`;
   const body = ids.map((id, i) => `## ${id}  →  ${id.split('-')[0]}.wav\n\n${narration[i]}\n`).join('\n');
   fs.writeFileSync(path.join(VO_DIR, 'GUION.md'), head + body);
+  fs.writeFileSync(path.join(VO_DIR, 'TODO-JUNTO.txt'), narration.join('\n\n<long pause> <long pause>\n\n') + '\n');
   console.log(`wrote ${path.join(VO_DIR, 'GUION.md')}`);
 }
 
@@ -68,9 +99,11 @@ function exportScript(ids, narration) {
     const ids = await page.evaluate(() => window.SCENE_IDS);
     if (arg('export-script', false)) { exportScript(ids, narration); await browser.close(); return; }
     let external = 0;
+    const full = splitFull(ids.length, narration);
     const clips = narration.map((n, i) => {
-      const own = findVoiceover(ids[i]);
+      const own = findVoiceover(ids[i]);              // a per-scene file always wins (to redo one scene)
       if (own) { external++; return normalise(own, i); }
+      if (full) { external++; return normalise(full[i], i); }
       return n ? tts(n, i) : null;
     });
     console.log(`  narration: ${external}/${ids.length} scenes from ${VO_DIR}, the rest with the draft voice`);
