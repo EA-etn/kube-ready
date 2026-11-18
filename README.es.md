@@ -22,7 +22,7 @@ No necesita clúster. Tarda un segundo. Rompe el CI con un mensaje claro y una p
 
 <img src="docs/video/kube-ready-demo-es.gif" alt="Demo de terminal: un Deployment con tag latest, una réplica y sin probes falla la comprobación; el arreglado pasa; un baseline oculta los hallazgos conocidos" width="100%">
 
-<sub>🎬 Vídeo explicativo de dos minutos, con voz: [Español](docs/video/kube-ready-explainer-es.mp4) · [English](docs/video/kube-ready-explainer-en.mp4)</sub>
+<sub>🎬 Vídeo explicativo de cinco minutos, con voz: [Español](docs/video/kube-ready-explainer-es.mp4) · [English](docs/video/kube-ready-explainer-en.mp4)</sub>
 
 ```
 $ kube-ready check examples/bad --verbose

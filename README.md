@@ -22,7 +22,7 @@ No cluster needed. Runs in a second. Fails your CI with a clear message and a hi
 
 <img src="docs/video/kube-ready-demo-en.gif" alt="Terminal demo: a Deployment with a latest tag, one replica and no probes fails the check; the fixed one passes; a baseline hides known findings" width="100%">
 
-<sub>🎬 Two-minute narrated explainer: [English](docs/video/kube-ready-explainer-en.mp4) · [Español](docs/video/kube-ready-explainer-es.mp4)</sub>
+<sub>🎬 Five-minute narrated explainer: [English](docs/video/kube-ready-explainer-en.mp4) · [Español](docs/video/kube-ready-explainer-es.mp4)</sub>
 
 ```
 $ kube-ready check examples/bad --verbose

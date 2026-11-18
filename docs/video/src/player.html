@@ -33,6 +33,7 @@
   let stepNo = 0; for (const sc of scenes) for (const b of sc.blocks || []) { if (b.cap !== (sc._lastCap)) stepNo++; b.step = stepNo; sc._lastCap = b.cap; }
   window.VISUAL = scenes.map((s) => s.visual);
   window.NARRATION = scenes.map((s) => s.narration || '');
+  window.SCENE_IDS = scenes.map((s, i) => s.id || String(i + 1).padStart(2, '0'));
   window.setTimeline = function (d) { durs = d; starts = []; total = 0; for (const x of d) { starts.push(total); total += x; } window.TOTAL = total; return total; };
   window.setTimeline(window.VISUAL);
 

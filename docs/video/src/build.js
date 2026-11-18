@@ -10,7 +10,11 @@ const path = require('path');
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i < 0 ? d : (process.argv[i + 1] && !process.argv[i + 1].startsWith('--') ? process.argv[i + 1] : true); };
 const production = arg('production', 'demo'), lang = arg('lang', 'en'), fps = +arg('fps', 12);
 const outDir = path.resolve(arg('out', '..')), wantGif = !!arg('gif', false);
-const VOICE = { es: ['mb-es1', '-s', '135', '-p', '45'], en: ['mb-en1', '-s', '150', '-p', '45'] };
+// Draft voice only: espeak-ng's own voices (no MBROLA, which leaves gaps in Spanish).
+// Real narration: one audio file per scene in docs/video/voiceover/<lang>/ (see GUION.md there).
+const VOICE = { es: ['es', '-s', '150', '-p', '40'], en: ['en-us', '-s', '160', '-p', '40'] };
+const VO_DIR = path.resolve(__dirname, '..', 'voiceover', lang);
+const VO_EXT = ['.wav', '.mp3', '.m4a', '.ogg', '.flac', '.aac'];
 // How the Spanish voice should pronounce English terms (voice only, subtitles stay clean)
 const PRON = { es: [[/kube-ready/g, 'kiub redi'], [/latest/g, 'léitest'], [/\broot\b/g, 'rut'], [/cosign/g, 'cosáin'], [/YAML/g, 'yámel'], [/JSON/g, 'yéison'], [/GitHub/g, 'guit jab'], [/pipeline/g, 'páiplain'], [/Kustomize/g, 'kastomáis'], [/pre-commit/g, 'pri commít'], [/Python/g, 'páiton'], [/Deployment/g, 'diplóiment'], [/probes/g, 'proubs'], [/baseline/g, 'béislain'], [/GitOps/g, 'guitops'], [/Docker/g, 'dóker'], [/Helm/g, 'jelm'], [/charts/g, 'charts'], [/SBOM/g, 'ese bom'], [/SHA/g, 'ese hache a'], [/pip/g, 'pip'], [/clúster/g, 'clúster'], [/Action/g, 'ákshon'], [/pull requests/g, 'pul recuésts'], [/Dependabot/g, 'dependabot']], en: [] };
 
@@ -23,8 +27,32 @@ function tts(text, i) {
   const txt = path.join(tmp, `n${i}.txt`), raw = path.join(tmp, `n${i}.raw.wav`), wav = path.join(tmp, `n${i}.wav`);
   fs.writeFileSync(txt, spoken);
   run('espeak-ng', ['-v', VOICE[lang][0], ...VOICE[lang].slice(1), '-f', txt, '-w', raw]);
-  run('ffmpeg', ['-y', '-v', 'error', '-i', raw, '-ar', '22050', '-ac', '1', '-af', 'volume=1.4', wav]);
+  run('ffmpeg', ['-y', '-v', 'error', '-i', raw, '-ar', '44100', '-ac', '1', '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11', wav]);
   return wav;
+}
+
+function findVoiceover(id) {
+  if (!fs.existsSync(VO_DIR)) return null;
+  const num = id.split('-')[0];
+  const f = fs.readdirSync(VO_DIR).find((x) => VO_EXT.includes(path.extname(x).toLowerCase()) && (x.startsWith(id) || x.split(/[-_. ]/)[0] === num));
+  return f ? path.join(VO_DIR, f) : null;
+}
+function normalise(file, i) {
+  // Same format for every clip; trim leading/trailing silence that TTS tools add.
+  const wav = path.join(tmp, `v${i}.wav`);
+  run('ffmpeg', ['-y', '-v', 'error', '-i', file, '-ac', '1', '-ar', '44100',
+    '-af', 'silenceremove=start_periods=1:start_threshold=-50dB,areverse,silenceremove=start_periods=1:start_threshold=-50dB,areverse,loudnorm=I=-16:TP=-1.5:LRA=11', wav]);
+  return wav;
+}
+function exportScript(ids, narration) {
+  fs.mkdirSync(VO_DIR, { recursive: true });
+  const es = lang === 'es';
+  const head = es
+    ? `# Guion para la voz (${lang})\n\nUn audio por escena. Nombra cada archivo con su número (01.wav, 02.wav... o 01-intro.wav) y déjalo en esta carpeta.\nFormatos: wav, mp3, m4a, ogg, flac.\n\nInstrucción de estilo para Gemini (pégala en "Style instructions"):\n\n> Lee en español de España, con tono cercano y seguro, como en un tutorial técnico. Ritmo tranquilo, pausas naturales en las comas. Pronuncia en inglés los términos técnicos: kube-ready, Kubernetes, Deployment, latest, root, pipeline, baseline, GitHub, Helm, Kustomize, Argo CD, cosign, SBOM.\n\n`
+    : `# Voice-over script (${lang})\n\nOne audio file per scene, named by its number (01.wav, 02.wav... or 01-intro.wav), in this folder.\nFormats: wav, mp3, m4a, ogg, flac.\n\nStyle instruction for Gemini:\n\n> Read in clear, friendly English, like a calm technical walkthrough. Natural pauses at commas.\n\n`;
+  const body = ids.map((id, i) => `## ${id}  →  ${id.split('-')[0]}.wav\n\n${narration[i]}\n`).join('\n');
+  fs.writeFileSync(path.join(VO_DIR, 'GUION.md'), head + body);
+  console.log(`wrote ${path.join(VO_DIR, 'GUION.md')}`);
 }
 
 (async () => {
@@ -37,7 +65,15 @@ function tts(text, i) {
   let durs = visual, audio = null;
   if (production === 'explainer') {
     const narration = await page.evaluate(() => window.NARRATION);
-    const clips = narration.map((n, i) => (n ? tts(n, i) : null));
+    const ids = await page.evaluate(() => window.SCENE_IDS);
+    if (arg('export-script', false)) { exportScript(ids, narration); await browser.close(); return; }
+    let external = 0;
+    const clips = narration.map((n, i) => {
+      const own = findVoiceover(ids[i]);
+      if (own) { external++; return normalise(own, i); }
+      return n ? tts(n, i) : null;
+    });
+    console.log(`  narration: ${external}/${ids.length} scenes from ${VO_DIR}, the rest with the draft voice`);
     durs = visual.map((v, i) => (clips[i] ? Math.max(v, dur(clips[i]) + 0.9) : v));
     // Mix: every clip starts at its scene start
     const starts = []; let acc = 0; for (const d of durs) { starts.push(acc); acc += d; }
@@ -61,7 +97,7 @@ function tts(text, i) {
   const vargs = ['-y', '-v', 'error', '-framerate', String(fps), '-i', path.join(fdir, 'f_%05d.jpg')];
   if (audio) vargs.push('-i', audio);
   vargs.push('-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '23', '-preset', 'medium', '-movflags', '+faststart');
-  if (audio) vargs.push('-c:a', 'aac', '-b:a', '112k', '-shortest');
+  if (audio) vargs.push('-c:a', 'aac', '-b:a', '160k', '-shortest');
   vargs.push(`${base}.mp4`);
   run('ffmpeg', vargs);
   console.log(`  wrote ${base}.mp4 (${(fs.statSync(`${base}.mp4`).size / 1e6).toFixed(1)} MB, ${dur(`${base}.mp4`).toFixed(1)}s)`);
