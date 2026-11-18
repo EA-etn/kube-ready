@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "kube-ready"
-version = "0.1.0"
+version = "0.1.1"
 description = "Is this Kubernetes manifest ready for production? A fast, opinionated linter for your CI."
 readme = "README.md"
 license = "MIT"

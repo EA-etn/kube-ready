@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1
+
+- The source archive only contains what builds and tests the package (33 KB instead of 28 MB).
+- Release published from a tree without the video material, which moved to a private repository.
+- CI uploads code scanning results from the good examples, so the Security tab shows no
+  deliberate alerts.
+
 ## 0.1.0
 
 First release.

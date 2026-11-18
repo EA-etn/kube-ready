@@ -1,12 +1,12 @@
 name: Release
 
-# Tag a version (git tag v0.1.0 && git push --tags) to:
+# Tag a version (git tag v0.1.1 && git push --tags) to:
 #   1. build the wheel and attach it to a GitHub Release
 #   2. push a multi-arch image to ghcr.io/<owner>/kube-ready:<version> and :latest,
 #      with SBOM and provenance attestations, signed with cosign (keyless, Sigstore)
 #
 # Verify the signature of a published image:
-#   cosign verify ghcr.io/ea-etn/kube-ready:0.1.0 \
+#   cosign verify ghcr.io/ea-etn/kube-ready:0.1.1 \
 #     --certificate-identity-regexp 'https://github.com/EA-etn/kube-ready/' \
 #     --certificate-oidc-issuer https://token.actions.githubusercontent.com
 on:

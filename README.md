@@ -171,7 +171,7 @@ to shrink it. `baseline: .kube-ready-baseline.json` in `.kube-ready.yaml` makes 
 ### GitHub Actions
 
 ```yaml
-- uses: EA-etn/kube-ready@v0.1.0
+- uses: EA-etn/kube-ready@v0.1.1
   with:
     path: manifests/
     fail-on: warning
@@ -189,7 +189,7 @@ to shrink it. `baseline: .kube-ready-baseline.json` in `.kube-ready.yaml` makes 
 ```yaml
 repos:
   - repo: https://github.com/EA-etn/kube-ready
-    rev: v0.1.0
+    rev: v0.1.1
     hooks:
       - id: kube-ready
         files: ^manifests/.*\.ya?ml$
@@ -236,7 +236,7 @@ The release workflow is the same story the tool tells, applied to itself:
   provenance attestations** from BuildKit. Verify before you run it:
 
 ```bash
-cosign verify ghcr.io/ea-etn/kube-ready:0.1.0 \
+cosign verify ghcr.io/ea-etn/kube-ready:0.1.1 \
   --certificate-identity-regexp 'https://github.com/EA-etn/kube-ready/' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```

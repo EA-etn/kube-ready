@@ -170,7 +170,7 @@ encogerlo. `baseline: .kube-ready-baseline.json` en `.kube-ready.yaml` lo deja p
 ### GitHub Actions
 
 ```yaml
-- uses: EA-etn/kube-ready@v0.1.0
+- uses: EA-etn/kube-ready@v0.1.1
   with:
     path: manifests/
     fail-on: warning
@@ -188,7 +188,7 @@ encogerlo. `baseline: .kube-ready-baseline.json` en `.kube-ready.yaml` lo deja p
 ```yaml
 repos:
   - repo: https://github.com/EA-etn/kube-ready
-    rev: v0.1.0
+    rev: v0.1.1
     hooks:
       - id: kube-ready
         files: ^manifests/.*\.ya?ml$
@@ -236,7 +236,7 @@ El workflow de release aplica a la propia herramienta lo que ella exige a los de
   atestación de procedencia** de BuildKit. Verifícala antes de ejecutarla:
 
 ```bash
-cosign verify ghcr.io/ea-etn/kube-ready:0.1.0 \
+cosign verify ghcr.io/ea-etn/kube-ready:0.1.1 \
   --certificate-identity-regexp 'https://github.com/EA-etn/kube-ready/' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
