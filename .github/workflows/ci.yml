@@ -36,18 +36,20 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: The good examples pass at the strictest level
+      # The SARIF that reaches the Security tab comes from the good examples, so the tab shows the
+      # integration working with zero alerts instead of 29 deliberate ones from examples/bad.
+      - name: The good examples pass at the strictest level (and upload SARIF)
         uses: ./
         with:
           path: examples/good
           fail-on: info
+          sarif-file: report.sarif
 
-      - name: The bad examples produce a SARIF report (does not fail the build)
+      - name: The bad examples are caught (findings as annotations, no SARIF upload)
         uses: ./
         with:
           path: examples/bad
           fail-on: never
-          sarif-file: report.sarif
 
       - uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         if: always()
