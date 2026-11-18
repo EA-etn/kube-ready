@@ -33,7 +33,9 @@ def narration(lang: str) -> list[str]:
         f"vm.runInNewContext(fs.readFileSync({json.dumps(str(HERE / 'script.js'))},'utf8'),c);"
         f"console.log(JSON.stringify(c.window.SCRIPT.explainer({json.dumps(lang)}).map(s=>s.narration)))"
     )
-    return json.loads(subprocess.run(["node", "-e", js], capture_output=True, text=True, check=True).stdout)
+    return json.loads(
+        subprocess.run(["node", "-e", js], capture_output=True, text=True, check=True).stdout
+    )
 
 
 def mfcc(y: np.ndarray) -> np.ndarray:
@@ -43,14 +45,28 @@ def mfcc(y: np.ndarray) -> np.ndarray:
 
 def pauses(path: Path) -> list[tuple[float, float]]:
     err = subprocess.run(
-        ["ffmpeg", "-v", "info", "-i", str(path), "-af", "silencedetect=noise=-42dB:d=0.12", "-f", "null", "-"],
-        capture_output=True, text=True,
+        [
+            "ffmpeg",
+            "-v",
+            "info",
+            "-i",
+            str(path),
+            "-af",
+            "silencedetect=noise=-42dB:d=0.12",
+            "-f",
+            "null",
+            "-",
+        ],
+        capture_output=True,
+        text=True,
     ).stderr
     out, start = [], None
     for line in err.splitlines():
         if m := re.search(r"silence_start: ([\d.]+)", line):
             start = float(m.group(1))
-        if (m := re.search(r"silence_end: ([\d.]+) \| silence_duration: ([\d.]+)", line)) and start is not None:
+        if (
+            m := re.search(r"silence_end: ([\d.]+) \| silence_duration: ([\d.]+)", line)
+        ) and start is not None:
             out.append(((start + float(m.group(1))) / 2, float(m.group(2))))
             start = None
     return out
@@ -59,20 +75,28 @@ def pauses(path: Path) -> list[tuple[float, float]]:
 def main() -> None:
     lang = sys.argv[1] if len(sys.argv) > 1 else "es"
     vo = HERE.parent / "voiceover" / lang
-    target = next(p for p in vo.iterdir() if re.match(r"(completo|full)\.(wav|mp3|m4a|ogg|flac|aac)$", p.name, re.I))
+    target = next(
+        p
+        for p in vo.iterdir()
+        if re.match(r"(completo|full)\.(wav|mp3|m4a|ogg|flac|aac)$", p.name, re.I)
+    )
     texts = narration(lang)
     with tempfile.TemporaryDirectory() as tmp:
         refs = []
         for i, t in enumerate(texts):
             wav = Path(tmp) / f"{i:02d}.wav"
-            subprocess.run(["espeak-ng", "-v", VOICE[lang], "-s", "165", "-w", str(wav), t], check=True)
+            subprocess.run(
+                ["espeak-ng", "-v", VOICE[lang], "-s", "165", "-w", str(wav), t], check=True
+            )
             refs.append(librosa.load(wav, sr=SR)[0])
     bounds, acc = [], 0
     for r in refs[:-1]:
         acc += len(r)
         bounds.append(acc / HOP)
     tgt = librosa.load(target, sr=SR)[0]
-    _, wp = librosa.sequence.dtw(X=mfcc(np.concatenate(refs)), Y=mfcc(tgt), metric="cosine", backtrack=True)
+    _, wp = librosa.sequence.dtw(
+        X=mfcc(np.concatenate(refs)), Y=mfcc(tgt), metric="cosine", backtrack=True
+    )
     wp = wp[::-1]
     sil = pauses(target)
     lines = [f"# Scene boundaries in {target.name} (seconds). One per line; edit to nudge a cut."]
