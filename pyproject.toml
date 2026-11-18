@@ -51,7 +51,7 @@ packages = ["src/kube_ready"]
 # The source archive only needs what builds and tests the package: the videos, diagrams and
 # playground under docs/ would otherwise make it ~28 MB.
 [tool.hatch.build.targets.sdist]
-include = ["src/", "tests/", "examples/", "README.md", "README.es.md", "LICENSE", "CHANGELOG.md"]
+include = ["/src", "/tests", "/examples", "/README.md", "/README.es.md", "/LICENSE", "/CHANGELOG.md", "/pyproject.toml"]
 
 [tool.ruff]
 line-length = 100
