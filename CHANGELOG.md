@@ -14,4 +14,4 @@ First release.
 - Config file, `--disable`, per-resource `kube-ready/ignore` annotation, `--fail-on`.
 - GitHub Action, pre-commit hook and multi-arch Docker image.
 - `kube_ready.api.check_text()` for scripts and the browser playground (GitHub Pages, Pyodide).
-- Diagrams (how it works, scenarios) and videos (terminal demo, narrated explainer) in EN and ES.
+- Diagrams (how it works, scenarios) and an animated terminal demo, in EN and ES.
