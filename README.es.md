@@ -66,7 +66,8 @@ ejecuta el paquete real en tu navegador con Pyodide, así que no se sube nada a 
 ## Instalación
 
 ```bash
-pipx install kube-ready            # o: pip install kube-ready
+# desde la release (o: pip install git+https://github.com/EA-etn/kube-ready)
+pipx install https://github.com/EA-etn/kube-ready/releases/download/v0.1.1/kube_ready-0.1.1-py3-none-any.whl
 kube-ready --version
 ```
 
@@ -261,14 +262,6 @@ make lint test check      # ruff, mypy --strict, pytest, los ejemplos
 ```
 
 En [CONTRIBUTING.md](CONTRIBUTING.md) está cómo añadir una regla.
-
-## Hoja de ruta
-
-- [x] 22 reglas, salida SARIF, GitHub Action, hook de pre-commit, imagen multi-arch
-- [x] `Service` sin pods que lo respalden, `Ingress` sin TLS, capabilities, seccomp
-- [x] Fichero baseline para adoptar poco a poco en repos grandes (`--baseline`)
-- [ ] Publicar en PyPI (trusted publishing)
-- [ ] Cobertura de Gateway API (`HTTPRoute`) y `NetworkPolicy`
 
 ## Licencia
 

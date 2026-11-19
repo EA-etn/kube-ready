@@ -67,7 +67,8 @@ real package in your browser with Pyodide, so nothing is uploaded anywhere.
 ## Install
 
 ```bash
-pipx install kube-ready            # or: pip install kube-ready
+# from the release (or: pip install git+https://github.com/EA-etn/kube-ready)
+pipx install https://github.com/EA-etn/kube-ready/releases/download/v0.1.1/kube_ready-0.1.1-py3-none-any.whl
 kube-ready --version
 ```
 
@@ -261,14 +262,6 @@ make lint test check      # ruff, mypy --strict, pytest, the examples
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add a rule.
-
-## Roadmap
-
-- [x] 22 rules, SARIF output, GitHub Action, pre-commit hook, multi-arch image
-- [x] `Service` without matching pods, `Ingress` without TLS, capabilities, seccomp
-- [x] Baseline file to adopt gradually in big repositories (`--baseline`)
-- [ ] Publish to PyPI (trusted publishing)
-- [ ] Gateway API (`HTTPRoute`) and `NetworkPolicy` coverage
 
 ## License
 

@@ -194,7 +194,7 @@ async function check() {
     $('run').disabled = false;
     await check();
   } catch (e) {
-    $('status').innerHTML = `Could not load the playground: ${esc(e.message)}. <br>You can always run it locally: <code>pipx install kube-ready</code>.`;
+    $('status').innerHTML = `Could not load the playground: ${esc(e.message)}. <br>You can always run it locally: <code>pipx install git+https://github.com/EA-etn/kube-ready</code>.`;
     console.error(e);
   }
 })();
